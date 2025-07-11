@@ -1,0 +1,71 @@
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f5f5f5;
+  color: #222;
+}
+
+header {
+  background: #9b0f22;
+  color: white;
+  padding: 10px;
+  text-align: center;
+}
+
+.logo-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 10px;
+}
+
+.logo-section .avatar,
+.logo-section .gift-icon {
+  width: 35px;
+  height: 35px;
+}
+
+.banner {
+  background: #cc0000;
+  padding: 10px;
+  font-size: 14px;
+}
+
+.game-sections {
+  padding: 10px;
+}
+
+.card {
+  display: block;
+  margin: 10px 0;
+  padding: 20px;
+  color: white;
+  text-align: center;
+  border-radius: 10px;
+  text-decoration: none;
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.green { background: linear-gradient(to right, #0f9b0f, #00ff87); }
+.orange { background: linear-gradient(to right, #ff8008, #ffc837); }
+.red { background: linear-gradient(to right, #ff0844, #ffb199); }
+
+.navbar {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  background: white;
+  display: flex;
+  justify-content: space-around;
+  border-top: 1px solid #ccc;
+  font-size: 12px;
+}
+
+.navbar a {
+  color: black;
+  text-align: center;
+  padding: 10px 0;
+  flex: 1;
+  text-decoration: none;
+}

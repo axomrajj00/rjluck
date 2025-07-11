@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mystery Box</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>Mystery Box 🎁</h1>
+  <p>Click below to open a mystery box:</p>
+  <button onclick="openMysteryBox()">Open</button>
+  <p id="result"></p>
+  <br><a href="index.html">⬅ Back to Home</a>
+  <script>
+    function openMysteryBox() {
+      const rewards = [0, 5, 10, 20, 50];
+      const win = rewards[Math.floor(Math.random() * rewards.length)];
+      document.getElementById("result").innerText = "You won Rs. " + win;
+    }
+  </script>
+</body>
+</html>
