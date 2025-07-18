@@ -55,6 +55,11 @@ class UltimateRJ:
         self.wake_words = ["hello rj", "rj", "hello"]
         self.conversation_history = []
         
+        # Retry mechanism
+        self.last_failed_command = None
+        self.retry_mode = False
+        self.retry_suggestions = []
+        
         self.setup_command_patterns()
         self.setup_memory_system()
         self.setup_gui()
@@ -529,32 +534,45 @@ class UltimateRJ:
         if not command:
             return
         
+        # Check for retry commands
+        if self.is_retry_command(command):
+            self.handle_retry_command(command)
+            return
+        
         self.memory_data['session_stats']['total_tasks'] += 1
         self.update_status("🤖 Working...", '#ffaa00')
         
         try:
+            # Reset retry mode for new commands
+            self.retry_mode = False
+            self.last_failed_command = None
+            
             # Auto-detect and execute based on command content
+            success = False
             if self.is_coding_command(command):
-                self.auto_handle_coding(command)
+                success = self.auto_handle_coding(command)
             elif self.is_system_command(command):
-                self.auto_handle_system(command)
+                success = self.auto_handle_system(command)
             elif self.is_web_command(command):
-                self.auto_handle_web(command)
+                success = self.auto_handle_web(command)
             elif self.is_file_command(command):
-                self.auto_handle_files(command)
+                success = self.auto_handle_files(command)
             elif self.is_productivity_command(command):
-                self.auto_handle_productivity(command)
+                success = self.auto_handle_productivity(command)
             else:
                 # Use AI for general queries
-                self.handle_ai_query(command)
+                success = self.handle_ai_query(command)
             
-            self.memory_data['session_stats']['successful_completions'] += 1
-            self.update_status("✅ Task Completed", '#44ff44')
+            if success:
+                self.memory_data['session_stats']['successful_completions'] += 1
+                self.update_status("✅ Task Completed", '#44ff44')
+            else:
+                # Task failed, enable retry mode
+                self.enable_retry_mode(command)
             
         except Exception as e:
             self.log_to_console(f"Error processing command: {e}", 'error')
-            self.speak(f"Sir, task mein error aaya: {str(e)}")
-            self.update_status("❌ Error", '#ff4444')
+            self.enable_retry_mode(command, str(e))
         
         self.save_memory()
 
@@ -564,34 +582,40 @@ class UltimateRJ:
                           'banao', 'create', 'generate', 'chatgpt', 'gpt']
         return any(keyword in command.lower() for keyword in coding_keywords)
 
-    def auto_handle_coding(self, command: str):
+    def auto_handle_coding(self, command: str) -> bool:
         """Automatically handle coding commands"""
         command = command.lower()
         
-        if 'chatgpt' in command or 'gpt' in command:
-            # Extract search query
-            search_query = self.extract_search_query(command)
-            self.speak("Sir, ChatGPT open kar raha hun!")
-            self.log_to_console("Opening ChatGPT...", 'system')
-            webbrowser.open("https://chat.openai.com/")
-            if search_query:
-                time.sleep(3)
-                try:
-                    pyautogui.typewrite(search_query)
-                    self.speak(f"Sir, '{search_query}' search query type kar diya!")
-                except:
-                    self.speak(f"Sir, manually '{search_query}' search kariye.")
-        
-        elif 'vs code' in command or 'vscode' in command:
-            # Auto-detect project type and create
-            project_type = self.detect_project_type(command)
-            self.speak("Sir, VS Code open kar raha hun aur project create kar raha hun!")
-            self.create_and_open_project(project_type, command)
-        
-        else:
-            # Generate custom code
-            self.speak("Sir, aapke liye code generate kar raha hun!")
-            self.generate_smart_code(command)
+        try:
+            if 'chatgpt' in command or 'gpt' in command:
+                # Extract search query
+                search_query = self.extract_search_query(command)
+                self.speak("Sir, ChatGPT open kar raha hun!")
+                self.log_to_console("Opening ChatGPT...", 'system')
+                webbrowser.open("https://chat.openai.com/")
+                if search_query:
+                    time.sleep(3)
+                    try:
+                        pyautogui.typewrite(search_query)
+                        self.speak(f"Sir, '{search_query}' search query type kar diya!")
+                    except:
+                        self.speak(f"Sir, manually '{search_query}' search kariye.")
+                return True
+            
+            elif 'vs code' in command or 'vscode' in command:
+                # Auto-detect project type and create
+                project_type = self.detect_project_type(command)
+                self.speak("Sir, VS Code open kar raha hun aur project create kar raha hun!")
+                return self.create_and_open_project(project_type, command)
+            
+            else:
+                # Generate custom code
+                self.speak("Sir, aapke liye code generate kar raha hun!")
+                return self.generate_smart_code(command)
+                
+        except Exception as e:
+            self.log_to_console(f"Coding command failed: {e}", 'error')
+            return False
 
     def detect_project_type(self, command: str) -> str:
         """Auto-detect project type from command"""
@@ -614,14 +638,15 @@ class UltimateRJ:
         else:
             return 'basic_website'
 
-    def create_and_open_project(self, project_type: str, command: str):
+    def create_and_open_project(self, project_type: str, command: str) -> bool:
         """Create and open project automatically"""
         try:
             # Check VS Code installation
             if not self.check_vscode_installed():
-                self.speak("Sir, VS Code install nahi hai. Install kar raha hun...")
+                self.speak("Sir, VS Code install nahi hai. Mujhe alternative app try karne ko kehiye ya VS Code install kariye.")
                 self.log_to_console("VS Code not found, installation required", 'error')
-                return
+                self.suggest_alternatives("vscode", command)
+                return False
             
             # Create project
             project_name = f"{project_type}_{int(time.time())}"
@@ -641,22 +666,29 @@ class UltimateRJ:
             else:
                 self.create_basic_project(project_path, project_type)
             
-            # Open in VS Code
-            subprocess.Popen(['code', str(project_path)])
-            
-            self.speak(f"Sir, {project_type} successfully create kar diya aur VS Code mein open kar diya!")
-            self.log_to_console(f"Project created: {project_path}", 'success')
-            
-            # Save to memory
-            self.memory_data['projects_created'].append({
-                'type': project_type,
-                'path': str(project_path),
-                'command': command,
-                'created_at': datetime.now().isoformat()
-            })
+            # Try to open in VS Code
+            result = subprocess.Popen(['code', str(project_path)])
+            if result.returncode is None:  # Process started successfully
+                self.speak(f"Sir, {project_type} successfully create kar diya aur VS Code mein open kar diya!")
+                self.log_to_console(f"Project created: {project_path}", 'success')
+                
+                # Save to memory
+                self.memory_data['projects_created'].append({
+                    'type': project_type,
+                    'path': str(project_path),
+                    'command': command,
+                    'created_at': datetime.now().isoformat()
+                })
+                return True
+            else:
+                self.speak("Sir, VS Code open karne mein problem aaya. Alternative editor try karne ko kehiye.")
+                self.suggest_alternatives("vscode", command)
+                return False
             
         except Exception as e:
             self.speak(f"Sir, project create karne mein error: {str(e)}")
+            self.suggest_alternatives("project_creation", command)
+            return False
 
     def check_vscode_installed(self) -> bool:
         """Check if VS Code is installed"""
@@ -1506,46 +1538,89 @@ document.addEventListener('DOMContentLoaded', function() {
         system_keywords = ['volume', 'scroll', 'shutdown', 'restart', 'brightness', 'lock']
         return any(keyword in command.lower() for keyword in system_keywords)
 
-    def auto_handle_system(self, command: str):
+    def auto_handle_system(self, command: str) -> bool:
         """Automatically handle system commands"""
         command = command.lower()
         
-        if 'volume' in command:
-            if any(word in command for word in ['up', 'badhao', 'jyada', 'increase']):
-                subprocess.run(['amixer', '-D', 'pulse', 'sset', 'Master', '10%+'], capture_output=True)
-                self.speak("Sir, volume badha diya!")
-            elif any(word in command for word in ['down', 'kam', 'decrease']):
-                subprocess.run(['amixer', '-D', 'pulse', 'sset', 'Master', '10%-'], capture_output=True)
-                self.speak("Sir, volume kam kar diya!")
-            elif 'mute' in command:
-                subprocess.run(['amixer', '-D', 'pulse', 'sset', 'Master', 'toggle'], capture_output=True)
-                self.speak("Sir, audio mute/unmute kar diya!")
+        try:
+            if 'volume' in command:
+                if any(word in command for word in ['up', 'badhao', 'jyada', 'increase']):
+                    result = subprocess.run(['amixer', '-D', 'pulse', 'sset', 'Master', '10%+'], capture_output=True)
+                    if result.returncode == 0:
+                        self.speak("Sir, volume badha diya!")
+                        return True
+                    else:
+                        self.speak("Sir, volume control mein problem aaya. Alternative method try karne ko kahiye.")
+                        self.suggest_alternatives("system", command)
+                        return False
+                        
+                elif any(word in command for word in ['down', 'kam', 'decrease']):
+                    result = subprocess.run(['amixer', '-D', 'pulse', 'sset', 'Master', '10%-'], capture_output=True)
+                    if result.returncode == 0:
+                        self.speak("Sir, volume kam kar diya!")
+                        return True
+                    else:
+                        self.speak("Sir, volume control mein problem aaya. Alternative method try karne ko kahiye.")
+                        self.suggest_alternatives("system", command)
+                        return False
+                        
+                elif 'mute' in command:
+                    result = subprocess.run(['amixer', '-D', 'pulse', 'sset', 'Master', 'toggle'], capture_output=True)
+                    if result.returncode == 0:
+                        self.speak("Sir, audio mute/unmute kar diya!")
+                        return True
+                    else:
+                        self.speak("Sir, audio toggle mein problem aaya. Alternative method try karne ko kahiye.")
+                        self.suggest_alternatives("system", command)
+                        return False
+            
+            elif 'scroll' in command:
+                if any(word in command for word in ['down', 'niche']):
+                    try:
+                        for _ in range(3):
+                            subprocess.run(['xdotool', 'key', 'Down'], capture_output=True, check=True)
+                        self.speak("Sir, scroll down kar diya!")
+                        return True
+                    except:
+                        self.speak("Sir, scroll karne ke liye xdotool install nahi hai. Alternative method try karne ko kahiye.")
+                        self.suggest_alternatives("system", command)
+                        return False
+                        
+                elif any(word in command for word in ['up', 'upar']):
+                    try:
+                        for _ in range(3):
+                            subprocess.run(['xdotool', 'key', 'Up'], capture_output=True, check=True)
+                        self.speak("Sir, scroll up kar diya!")
+                        return True
+                    except:
+                        self.speak("Sir, scroll karne ke liye xdotool install nahi hai. Alternative method try karne ko kahiye.")
+                        self.suggest_alternatives("system", command)
+                        return False
+            
+            elif 'shutdown' in command:
+                if messagebox.askyesno("Confirm Shutdown", "Sir, system shutdown karna hai?"):
+                    self.speak("Sir, system shutdown kar raha hun!")
+                    subprocess.run(['shutdown', '-h', 'now'])
+                    return True
+                else:
+                    self.speak("Sir, shutdown cancel kar diya.")
+                    return True
+            
+            elif 'restart' in command:
+                if messagebox.askyesno("Confirm Restart", "Sir, system restart karna hai?"):
+                    self.speak("Sir, system restart kar raha hun!")
+                    subprocess.run(['shutdown', '-r', 'now'])
+                    return True
+                else:
+                    self.speak("Sir, restart cancel kar diya.")
+                    return True
+                    
+        except Exception as e:
+            self.speak("Sir, system command mein error aaya. Alternative method try karne ko kahiye.")
+            self.suggest_alternatives("system", command)
+            return False
         
-        elif 'scroll' in command:
-            if any(word in command for word in ['down', 'niche']):
-                try:
-                    for _ in range(3):
-                        subprocess.run(['xdotool', 'key', 'Down'], capture_output=True)
-                    self.speak("Sir, scroll down kar diya!")
-                except:
-                    self.speak("Sir, scroll karne ke liye xdotool install karna padega!")
-            elif any(word in command for word in ['up', 'upar']):
-                try:
-                    for _ in range(3):
-                        subprocess.run(['xdotool', 'key', 'Up'], capture_output=True)
-                    self.speak("Sir, scroll up kar diya!")
-                except:
-                    self.speak("Sir, scroll karne ke liye xdotool install karna padega!")
-        
-        elif 'shutdown' in command:
-            if messagebox.askyesno("Confirm Shutdown", "Sir, system shutdown karna hai?"):
-                self.speak("Sir, system shutdown kar raha hun!")
-                subprocess.run(['shutdown', '-h', 'now'])
-        
-        elif 'restart' in command:
-            if messagebox.askyesno("Confirm Restart", "Sir, system restart karna hai?"):
-                self.speak("Sir, system restart kar raha hun!")
-                subprocess.run(['shutdown', '-r', 'now'])
+        return True
 
     def is_web_command(self, command: str) -> bool:
         """Check if command is web related"""
@@ -1631,7 +1706,7 @@ document.addEventListener('DOMContentLoaded', function() {
         except Exception as e:
             self.speak(f"Sir, code generation mein error: {str(e)}")
 
-    def handle_ai_query(self, query: str):
+    def handle_ai_query(self, query: str) -> bool:
         """Handle general AI queries with Sir addressing"""
         try:
             system_content = """You are RJ, an advanced AI assistant that speaks perfect Hinglish.
@@ -1657,9 +1732,209 @@ document.addEventListener('DOMContentLoaded', function() {
                 ai_response = f"Sir, {ai_response}"
             
             self.speak(ai_response)
+            return True
             
         except Exception as e:
             self.speak(f"Sir, AI service mein problem hai: {str(e)}")
+            return False
+
+    def is_retry_command(self, command: str) -> bool:
+        """Check if command is asking for retry"""
+        retry_keywords = [
+            "ye krke dekho", "ye karo", "ye try karo", "phir try karo",
+            "dobara karo", "wapas karo", "retry karo", "again karo",
+            "iska alternative", "koi aur app", "different way",
+            "dusra tareeka", "alternative method", "koi aur option"
+        ]
+        command_lower = command.lower()
+        return any(keyword in command_lower for keyword in retry_keywords)
+
+    def enable_retry_mode(self, failed_command: str, error_msg: str = ""):
+        """Enable retry mode when command fails"""
+        self.retry_mode = True
+        self.last_failed_command = failed_command
+        self.update_status("❌ Failed - Retry Available", '#ff4444')
+        
+        if error_msg:
+            self.speak(f"Sir, task fail ho gaya: {error_msg}. Mujhe 'ye krke dekho' ya alternative batayiye.")
+        else:
+            self.speak("Sir, ye task complete nahi ho paya. Mujhe 'ye krke dekho' ya alternative method batayiye.")
+        
+        self.log_to_console(f"Failed command stored for retry: {failed_command}", 'error')
+
+    def suggest_alternatives(self, failure_type: str, original_command: str):
+        """Suggest alternatives when command fails"""
+        suggestions = []
+        
+        if failure_type == "vscode":
+            suggestions = [
+                "gedit text editor use karo",
+                "nano editor mein open karo", 
+                "browser mein HTML file open karo",
+                "simple text editor use karo"
+            ]
+        elif failure_type == "project_creation":
+            suggestions = [
+                "basic HTML file banao",
+                "simple text file mein code likhao",
+                "notepad mein code create karo"
+            ]
+        elif failure_type == "youtube":
+            suggestions = [
+                "browser mein YouTube manually open karo",
+                "google search try karo",
+                "different browser use karo"
+            ]
+        elif failure_type == "system":
+            suggestions = [
+                "manually system settings check karo",
+                "terminal command try karo",
+                "settings app open karo"
+            ]
+        
+        if suggestions:
+            self.retry_suggestions = suggestions
+            random_suggestion = random.choice(suggestions)
+            self.speak(f"Sir, alternative ye try kar sakte hain: {random_suggestion}")
+            self.log_to_console(f"Suggested alternative: {random_suggestion}", 'system')
+
+    def handle_retry_command(self, command: str):
+        """Handle retry commands from user"""
+        if not self.retry_mode or not self.last_failed_command:
+            self.speak("Sir, koi failed task nahi hai retry karne ke liye.")
+            return
+        
+        self.log_to_console(f"Retry requested for: {self.last_failed_command}", 'system')
+        
+        # Extract new approach from user command
+        if "alternative" in command.lower() or "aur" in command.lower():
+            # User wants alternative
+            if self.retry_suggestions:
+                suggestion = random.choice(self.retry_suggestions)
+                self.speak(f"Sir, ye alternative try kar raha hun: {suggestion}")
+                success = self.try_alternative_approach(self.last_failed_command, suggestion)
+            else:
+                success = self.try_intelligent_retry(self.last_failed_command)
+        else:
+            # User said "ye krke dekho" - try original command again with modifications
+            self.speak("Sir, dobara try kar raha hun same task ko different way mein!")
+            success = self.try_intelligent_retry(self.last_failed_command)
+        
+        if success:
+            self.speak("Sir, is baar successful ho gaya!")
+            self.retry_mode = False
+            self.last_failed_command = None
+            self.update_status("✅ Retry Successful", '#44ff44')
+        else:
+            self.speak("Sir, abhi bhi problem aa raha hai. Koi aur alternative try karne ko kahiye.")
+
+    def try_alternative_approach(self, original_command: str, alternative_method: str) -> bool:
+        """Try alternative approach for failed command"""
+        try:
+            if "gedit" in alternative_method and "vs code" in original_command:
+                # Use gedit instead of VS Code
+                project_type = self.detect_project_type(original_command)
+                project_name = f"{project_type}_{int(time.time())}"
+                project_path = Path.home() / "Desktop" / project_name
+                project_path.mkdir(exist_ok=True)
+                
+                # Create simple HTML file
+                html_file = project_path / "index.html"
+                basic_html = f"""<!DOCTYPE html>
+<html>
+<head>
+    <title>{project_type.replace('_', ' ').title()}</title>
+</head>
+<body>
+    <h1>Welcome to {project_type.replace('_', ' ').title()}</h1>
+    <p>Created by RJ Assistant using alternative method!</p>
+</body>
+</html>"""
+                html_file.write_text(basic_html, encoding='utf-8')
+                
+                # Open with gedit
+                subprocess.Popen(['gedit', str(html_file)])
+                self.speak(f"Sir, {project_type} gedit mein create kar diya!")
+                return True
+                
+            elif "browser" in alternative_method:
+                # Open in browser instead
+                if "youtube" in original_command:
+                    webbrowser.open("https://www.youtube.com")
+                    self.speak("Sir, YouTube browser mein open kar diya!")
+                    return True
+                    
+            elif "terminal" in alternative_method:
+                # Use terminal commands
+                subprocess.Popen(['gnome-terminal'])
+                self.speak("Sir, terminal open kar diya. Commands manually run kar sakte hain!")
+                return True
+                
+        except Exception as e:
+            self.log_to_console(f"Alternative approach failed: {e}", 'error')
+            return False
+        
+        return False
+
+    def try_intelligent_retry(self, original_command: str) -> bool:
+        """Try intelligent retry with modifications"""
+        try:
+            # Try different variations of the original command
+            if "vs code" in original_command:
+                # Try with different editors
+                editors = ["gedit", "nano", "vim"]
+                for editor in editors:
+                    try:
+                        if self.check_app_available(editor):
+                            self.speak(f"Sir, {editor} try kar raha hun...")
+                            subprocess.Popen([editor])
+                            return True
+                    except:
+                        continue
+                        
+            elif "youtube" in original_command:
+                # Try different YouTube URLs
+                urls = [
+                    "https://www.youtube.com",
+                    "https://m.youtube.com", 
+                    "https://youtube.com"
+                ]
+                for url in urls:
+                    try:
+                        webbrowser.open(url)
+                        self.speak("Sir, YouTube alternative URL se open kar diya!")
+                        return True
+                    except:
+                        continue
+                        
+            elif "volume" in original_command:
+                # Try different volume control methods
+                commands = [
+                    ['amixer', 'sset', 'Master', '5%+'],
+                    ['pactl', 'set-sink-volume', '@DEFAULT_SINK@', '+5%'],
+                    ['pulseaudio-ctl', 'up']
+                ]
+                for cmd in commands:
+                    try:
+                        subprocess.run(cmd, capture_output=True, check=True)
+                        self.speak("Sir, volume control alternative method se kar diya!")
+                        return True
+                    except:
+                        continue
+                        
+        except Exception as e:
+            self.log_to_console(f"Intelligent retry failed: {e}", 'error')
+            return False
+        
+        return False
+
+    def check_app_available(self, app_name: str) -> bool:
+        """Check if application is available"""
+        try:
+            result = subprocess.run(['which', app_name], capture_output=True, text=True)
+            return result.returncode == 0
+        except:
+            return False
 
     def run_gui(self):
         """Run the GUI version"""
