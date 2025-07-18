@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Text Command RJ - Smart Text-based Command Interface
-Features: Hindi/English understanding, Smart question asking, Direct text commands
+Features: Hindi/English understanding, Smart question asking, Direct text commands, Advanced System Controls
 """
 
 import os
@@ -47,8 +47,10 @@ class TextCommandRJ:
         print("Type your commands in Hindi/English mix!")
         print("Examples:")
         print("- notepad open karo")
-        print("- aaj 1 tarikh se 30 tarikh tak routine banao")
-        print("- youtube open karo aur ye song play karo: [song name]")
+        print("- scroll down karo / niche karo")
+        print("- volume jyada karo / increase karo")
+        print("- shutdown karo / restart karo")
+        print("- file delete karo")
         print("- Type 'exit' to quit\n")
 
     def setup_ai_client(self):
@@ -105,7 +107,25 @@ class TextCommandRJ:
             'create': ['create', 'banao', 'make'],
             'download': ['download', 'download kar'],
             'volume': ['volume', 'awaz'],
-            'routine': ['routine', 'schedule', 'plan']
+            'routine': ['routine', 'schedule', 'plan'],
+            'scroll': ['scroll', 'scrool'], # Added scroll patterns
+            'delete': ['delete', 'remove', 'hatao', 'delet'],
+            'shutdown': ['shutdown', 'shut down', 'power off', 'band kar', 'computer band kar'],
+            'restart': ['restart', 'reboot', 'dubara start kar', 'phir se start kar']
+        }
+        
+        # Advanced system control patterns
+        self.scroll_patterns = {
+            'down': ['down', 'niche', 'neeche', 'scroll down', 'scrool down'],
+            'up': ['up', 'upar', 'upor', 'scroll up', 'scrool up'],
+            'left': ['left', 'baye', 'bayen'],
+            'right': ['right', 'daye', 'dayen']
+        }
+        
+        self.volume_patterns = {
+            'increase': ['jyada', 'badhao', 'increase', 'tez', 'up', 'volume up'],
+            'decrease': ['kam', 'dhima', 'decrease', 'down', 'volume down'],
+            'mute': ['mute', 'band', 'off', 'chup']
         }
 
     def load_memory(self):
@@ -120,7 +140,9 @@ class TextCommandRJ:
                 'routines': [],
                 'user_preferences': {
                     'short_answer_mode': False,
-                    'language_preference': 'hinglish'
+                    'language_preference': 'hinglish',
+                    'volume_step': 10,
+                    'scroll_lines': 3
                 },
                 'session_stats': {
                     'total_commands': 0,
@@ -154,6 +176,165 @@ class TextCommandRJ:
             print("\n👋 Goodbye!")
             return "exit"
 
+    def get_confirmation(self, action: str, details: str = "") -> bool:
+        """Get user confirmation for critical actions"""
+        confirmation_msg = f"Confirm: {action}"
+        if details:
+            confirmation_msg += f" - {details}"
+        confirmation_msg += "? (yes/no)"
+        
+        self.speak(confirmation_msg)
+        response = self.get_user_input("⚠️  Confirm (yes/no): ").lower()
+        
+        return response in ['yes', 'y', 'haan', 'ha', 'han', 'okay', 'ok']
+
+    def execute_scroll_command(self, direction: str, lines: int = None):
+        """Execute scroll commands using keyboard simulation"""
+        if lines is None:
+            lines = self.memory_data['user_preferences']['scroll_lines']
+        
+        try:
+            if direction == 'down':
+                # Simulate Page Down or Arrow Down
+                for _ in range(lines):
+                    subprocess.run(['xdotool', 'key', 'Down'], capture_output=True)
+                response = f"Scroll down kar diya ({lines} lines)"
+                
+            elif direction == 'up':
+                # Simulate Page Up or Arrow Up  
+                for _ in range(lines):
+                    subprocess.run(['xdotool', 'key', 'Up'], capture_output=True)
+                response = f"Scroll up kar diya ({lines} lines)"
+                
+            elif direction == 'left':
+                subprocess.run(['xdotool', 'key', 'Left'], capture_output=True)
+                response = "Scroll left kar diya"
+                
+            elif direction == 'right':
+                subprocess.run(['xdotool', 'key', 'Right'], capture_output=True)
+                response = "Scroll right kar diya"
+            
+            else:
+                response = "Scroll direction samajh nahi aaya"
+            
+            self.speak(response)
+            
+        except FileNotFoundError:
+            # Fallback if xdotool not available
+            self.speak("Scroll feature ke liye xdotool install karna padega: sudo apt install xdotool")
+        except Exception as e:
+            self.speak(f"Scroll error: {str(e)}")
+
+    def execute_volume_command(self, action: str, step: int = None):
+        """Execute volume commands with feedback"""
+        if step is None:
+            step = self.memory_data['user_preferences']['volume_step']
+        
+        try:
+            if action == 'increase':
+                subprocess.run(['amixer', '-D', 'pulse', 'sset', 'Master', f'{step}%+'], capture_output=True)
+                current_volume = self.get_current_volume()
+                response = f"Volume {step}% badhaya. Current: {current_volume}%"
+                self.speak(response)
+                
+                # Ask if more adjustment needed
+                self.speak("Sir, itna thik hai na? Aur badhana hai?")
+                more_response = self.get_user_input("🔊 More volume? (yes/no): ").lower()
+                
+                if more_response in ['yes', 'y', 'haan', 'aur', 'thoda aur']:
+                    self.speak("Thoda aur badha raha hun")
+                    subprocess.run(['amixer', '-D', 'pulse', 'sset', 'Master', f'{step//2}%+'], capture_output=True)
+                    new_volume = self.get_current_volume()
+                    self.speak(f"Volume aur badha diya. Now: {new_volume}%")
+                
+            elif action == 'decrease':
+                subprocess.run(['amixer', '-D', 'pulse', 'sset', 'Master', f'{step}%-'], capture_output=True)
+                current_volume = self.get_current_volume()
+                response = f"Volume {step}% kam kiya. Current: {current_volume}%"
+                self.speak(response)
+                
+                # Ask if more adjustment needed
+                self.speak("Sir, itna thik hai na? Aur kam karna hai?")
+                more_response = self.get_user_input("🔉 Less volume? (yes/no): ").lower()
+                
+                if more_response in ['yes', 'y', 'haan', 'aur', 'thoda aur']:
+                    self.speak("Thoda aur kam kar raha hun")
+                    subprocess.run(['amixer', '-D', 'pulse', 'sset', 'Master', f'{step//2}%-'], capture_output=True)
+                    new_volume = self.get_current_volume()
+                    self.speak(f"Volume aur kam kar diya. Now: {new_volume}%")
+                
+            elif action == 'mute':
+                subprocess.run(['amixer', '-D', 'pulse', 'sset', 'Master', 'toggle'], capture_output=True)
+                self.speak("Audio mute/unmute kar diya")
+            
+        except Exception as e:
+            self.speak(f"Volume control error: {str(e)}")
+
+    def get_current_volume(self) -> int:
+        """Get current system volume percentage"""
+        try:
+            result = subprocess.run(['amixer', '-D', 'pulse', 'get', 'Master'], 
+                                  capture_output=True, text=True)
+            # Extract volume percentage from output
+            import re
+            match = re.search(r'\[(\d+)%\]', result.stdout)
+            if match:
+                return int(match.group(1))
+            return 50  # Default fallback
+        except:
+            return 50
+
+    def execute_delete_command(self, target: str = None):
+        """Execute delete commands with confirmation"""
+        if not target:
+            self.speak("Kya delete karna hai? File path ya name batayiye.")
+            target = self.get_user_input("🗑️  Delete target: ")
+        
+        if not target:
+            self.speak("Delete target nahi mila")
+            return
+        
+        # Confirm deletion
+        if self.get_confirmation("Delete", f"'{target}' file/folder"):
+            try:
+                target_path = Path(target)
+                
+                if target_path.exists():
+                    if target_path.is_file():
+                        target_path.unlink()
+                        self.speak(f"File '{target}' delete kar diya")
+                    elif target_path.is_dir():
+                        import shutil
+                        shutil.rmtree(target_path)
+                        self.speak(f"Folder '{target}' delete kar diya")
+                else:
+                    self.speak(f"'{target}' file/folder exist nahi karta")
+                    
+            except Exception as e:
+                self.speak(f"Delete error: {str(e)}")
+        else:
+            self.speak("Delete cancel kar diya")
+
+    def execute_shutdown_command(self):
+        """Execute shutdown with confirmation"""
+        if self.get_confirmation("System Shutdown", "Computer completely band ho jayega"):
+            self.speak("5 second mein shutdown ho raha hai...")
+            time.sleep(2)
+            self.speak("Goodbye!")
+            subprocess.run(['shutdown', '-h', 'now'])
+        else:
+            self.speak("Shutdown cancel kar diya")
+
+    def execute_restart_command(self):
+        """Execute restart with confirmation"""
+        if self.get_confirmation("System Restart", "Computer restart ho jayega"):
+            self.speak("5 second mein restart ho raha hai...")
+            time.sleep(2)
+            self.speak("Restart kar raha hun!")
+            subprocess.run(['shutdown', '-r', 'now'])
+        else:
+            self.speak("Restart cancel kar diya")
+
     def analyze_command_intent(self, command: str) -> Dict[str, Any]:
         """Analyze command to understand intent and extract information"""
         command = command.lower().strip()
@@ -168,22 +349,81 @@ class TextCommandRJ:
             'confidence': 0.0
         }
         
+        # Check for scroll commands
+        if any(word in command for word in ['scroll', 'scrool']):
+            analysis['intent'] = 'scroll_control'
+            analysis['confidence'] += 0.4
+            
+            for direction, patterns in self.scroll_patterns.items():
+                if any(pattern in command for pattern in patterns):
+                    analysis['parameters'] = [direction]
+                    analysis['confidence'] += 0.4
+                    break
+            
+            if not analysis['parameters']:
+                analysis['needs_clarification'] = True
+                analysis['clarification_type'] = 'scroll_direction'
+        
+        # Check for volume commands
+        elif 'volume' in command or any(word in command for word in ['jyada', 'kam', 'badhao', 'increase', 'decrease']):
+            analysis['intent'] = 'volume_control'
+            analysis['confidence'] += 0.4
+            
+            for action, patterns in self.volume_patterns.items():
+                if any(pattern in command for pattern in patterns):
+                    analysis['parameters'] = [action]
+                    analysis['confidence'] += 0.4
+                    break
+        
+        # Check for delete commands
+        elif any(word in command for word in ['delete', 'remove', 'hatao', 'delet']):
+            analysis['intent'] = 'delete_operation'
+            analysis['confidence'] += 0.5
+            
+            # Try to extract file/folder name
+            delete_patterns = [
+                r'delete\s+(.+)',
+                r'remove\s+(.+)',
+                r'hatao\s+(.+)',
+                r'delet\s+(.+)'
+            ]
+            
+            for pattern in delete_patterns:
+                match = re.search(pattern, command)
+                if match:
+                    target = match.group(1).strip()
+                    analysis['parameters'] = [target]
+                    analysis['confidence'] += 0.3
+                    break
+        
+        # Check for shutdown/restart
+        elif any(word in command for word in self.action_patterns['shutdown']):
+            analysis['intent'] = 'system_shutdown'
+            analysis['confidence'] = 0.9
+        
+        elif any(word in command for word in self.action_patterns['restart']):
+            analysis['intent'] = 'system_restart'
+            analysis['confidence'] = 0.9
+        
         # Check for applications
-        for app, patterns in self.app_patterns.items():
-            if any(pattern in command for pattern in patterns):
-                analysis['target'] = app
-                analysis['confidence'] += 0.3
-                break
+        elif any(app in command for app in ['notepad', 'calculator', 'browser', 'terminal']):
+            for app, patterns in self.app_patterns.items():
+                if any(pattern in command for pattern in patterns):
+                    analysis['target'] = app
+                    analysis['confidence'] += 0.3
+                    break
+            
+            # Check for actions
+            for action, patterns in self.action_patterns.items():
+                if any(pattern in command for pattern in patterns):
+                    analysis['action'] = action
+                    analysis['confidence'] += 0.3
+                    break
+            
+            analysis['intent'] = 'app_control'
         
-        # Check for actions
-        for action, patterns in self.action_patterns.items():
-            if any(pattern in command for pattern in patterns):
-                analysis['action'] = action
-                analysis['confidence'] += 0.3
-                break
-        
-        # Specific pattern matching
-        if 'routine' in command or 'schedule' in command:
+        # Check for routine creation
+        elif 'routine' in command or 'schedule' in command:
             analysis['intent'] = 'routine_creation'
             
             # Extract date range
@@ -197,6 +437,7 @@ class TextCommandRJ:
                 analysis['needs_clarification'] = True
                 analysis['clarification_type'] = 'date_range'
         
+        # Check for YouTube
         elif 'youtube' in command and ('song' in command or 'video' in command):
             analysis['intent'] = 'youtube_play'
             
@@ -222,22 +463,8 @@ class TextCommandRJ:
                 analysis['needs_clarification'] = True
                 analysis['clarification_type'] = 'song_name'
         
-        elif any(app in command for app in ['notepad', 'calculator', 'browser', 'terminal']):
-            analysis['intent'] = 'app_control'
-            analysis['confidence'] += 0.3
-        
-        elif 'volume' in command:
-            analysis['intent'] = 'system_control'
-            if any(word in command for word in ['up', 'badhao', 'tez']):
-                analysis['parameters'] = ['up']
-            elif any(word in command for word in ['down', 'kam', 'dhima']):
-                analysis['parameters'] = ['down']
-            elif any(word in command for word in ['mute', 'band', 'off']):
-                analysis['parameters'] = ['mute']
-            analysis['confidence'] += 0.4
-        
         # Set confidence based on overall analysis
-        if analysis['confidence'] < 0.5:
+        if analysis['confidence'] < 0.5 and not analysis['needs_clarification']:
             analysis['needs_clarification'] = True
             if not analysis['clarification_type']:
                 analysis['clarification_type'] = 'general_intent'
@@ -248,7 +475,18 @@ class TextCommandRJ:
         """Ask user for clarification when needed"""
         clarification_type = analysis['clarification_type']
         
-        if clarification_type == 'date_range':
+        if clarification_type == 'scroll_direction':
+            self.speak("Kya direction mein scroll karna hai? (up/down/left/right)")
+            direction_input = self.get_user_input("⬆️⬇️ Direction: ").lower()
+            
+            for direction, patterns in self.scroll_patterns.items():
+                if any(pattern in direction_input for pattern in patterns):
+                    analysis['parameters'] = [direction]
+                    analysis['needs_clarification'] = False
+                    analysis['confidence'] = 0.9
+                    break
+        
+        elif clarification_type == 'date_range':
             self.speak("Routine ke liye date range batayiye (example: 1 se 30 tarikh)")
             date_input = self.get_user_input("📅 Date range: ")
             
@@ -321,7 +559,25 @@ class TextCommandRJ:
         self.memory_data['session_stats']['total_commands'] += 1
         
         try:
-            if intent == 'app_control':
+            if intent == 'scroll_control':
+                direction = parameters[0] if parameters else 'down'
+                self.execute_scroll_command(direction)
+            
+            elif intent == 'volume_control':
+                action = parameters[0] if parameters else 'increase'
+                self.execute_volume_command(action)
+            
+            elif intent == 'delete_operation':
+                target = parameters[0] if parameters else None
+                self.execute_delete_command(target)
+            
+            elif intent == 'system_shutdown':
+                self.execute_shutdown_command()
+            
+            elif intent == 'system_restart':
+                self.execute_restart_command()
+            
+            elif intent == 'app_control':
                 self.handle_app_control(target, action, parameters)
             
             elif intent == 'routine_creation':
@@ -329,9 +585,6 @@ class TextCommandRJ:
             
             elif intent == 'youtube_play':
                 self.handle_youtube_play(parameters)
-            
-            elif intent == 'system_control':
-                self.handle_system_control(action, parameters)
             
             else:
                 # Use AI for general queries
@@ -452,26 +705,6 @@ class TextCommandRJ:
         else:
             self.speak("Song name nahi mila. Kya search karna hai?")
 
-    def handle_system_control(self, action: str, parameters: List):
-        """Handle system control commands"""
-        if parameters:
-            control_type = parameters[0]
-            
-            if control_type == 'up':
-                subprocess.run(['amixer', '-D', 'pulse', 'sset', 'Master', '10%+'], capture_output=True)
-                response = "Volume up!" if self.short_answer_mode else "Volume badh gaya"
-                self.speak(response)
-            
-            elif control_type == 'down':
-                subprocess.run(['amixer', '-D', 'pulse', 'sset', 'Master', '10%-'], capture_output=True)
-                response = "Volume down!" if self.short_answer_mode else "Volume kam ho gaya"
-                self.speak(response)
-            
-            elif control_type == 'mute':
-                subprocess.run(['amixer', '-D', 'pulse', 'sset', 'Master', 'toggle'], capture_output=True)
-                response = "Muted!" if self.short_answer_mode else "Audio toggle kar diya"
-                self.speak(response)
-
     def handle_ai_query(self, query: str):
         """Handle general AI queries"""
         try:
@@ -561,7 +794,7 @@ class TextCommandRJ:
 
     def run(self):
         """Main run loop for text commands"""
-        self.speak("Text Command RJ ready hai! Type karke commands dijiye.")
+        self.speak("Text Command RJ ready hai! Advanced controls ke saath. Type karke commands dijiye.")
         
         while self.running:
             try:
