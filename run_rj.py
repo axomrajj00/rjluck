@@ -1,61 +1,88 @@
 #!/usr/bin/env python3
 """
-RJ Assistant Launcher
-Quick launcher for Advanced RJ Assistant
+RJ Assistant Launcher - Easy way to start different versions of RJ
 """
 
-import sys
 import os
+import sys
+import subprocess
+
+def show_menu():
+    """Display launcher menu"""
+    print("🤖 RJ ASSISTANT LAUNCHER")
+    print("=" * 40)
+    print("1. Super Advanced RJ (GUI Mode) - Full features with visual interface")
+    print("2. Super Advanced RJ (Console Mode) - Full features, voice only")
+    print("3. Text Command RJ - Type commands, smart AI questions")
+    print("4. Advanced RJ (GUI Mode) - Memory + Tasks with GUI")
+    print("5. Advanced RJ (Console Mode) - Memory + Tasks, voice only")
+    print("6. Basic Enhanced RJ - Core features only")
+    print("7. Exit")
+    print("=" * 40)
+
+def run_option(choice):
+    """Run selected option"""
+    try:
+        if choice == "1":
+            print("🚀 Starting Super Advanced RJ with GUI...")
+            subprocess.run([sys.executable, "super_advanced_rj.py"])
+        
+        elif choice == "2":
+            print("🚀 Starting Super Advanced RJ in Console Mode...")
+            subprocess.run([sys.executable, "super_advanced_rj.py", "--no-gui"])
+        
+        elif choice == "3":
+            print("🚀 Starting Text Command RJ...")
+            subprocess.run([sys.executable, "text_command_rj.py"])
+        
+        elif choice == "4":
+            print("🚀 Starting Advanced RJ with GUI...")
+            subprocess.run([sys.executable, "advanced_rj.py"])
+        
+        elif choice == "5":
+            print("🚀 Starting Advanced RJ in Console Mode...")
+            subprocess.run([sys.executable, "advanced_rj.py", "--no-gui"])
+        
+        elif choice == "6":
+            print("🚀 Starting Basic Enhanced RJ...")
+            subprocess.run([sys.executable, "enhanced_jarvis.py"])
+        
+        elif choice == "7":
+            print("👋 Goodbye!")
+            sys.exit(0)
+        
+        else:
+            print("❌ Invalid choice! Please select 1-7")
+            return False
+        
+        return True
+        
+    except FileNotFoundError as e:
+        print(f"❌ File not found: {e}")
+        print("Make sure all RJ files are in the current directory.")
+        return False
+    except Exception as e:
+        print(f"❌ Error starting RJ: {e}")
+        return False
 
 def main():
-    print("🎙️ RJ Assistant Launcher")
-    print("=" * 50)
-    print("1. 🚀 Super Advanced RJ (GUI Mode) - RECOMMENDED")
-    print("2. 🎮 Super Advanced RJ (Console Mode)")
-    print("3. 📱 Advanced RJ (GUI Mode)")
-    print("4. 💻 Advanced RJ (Console Mode)")
-    print("5. 📞 Basic RJ Assistant")
-    print("6. 🚪 Exit")
-    print()
-    print("✨ New Features in Super Advanced RJ:")
-    print("   • Sleep Mode (30 sec timeout)")
-    print("   • 'Hello RJ' activation")
-    print("   • 'RJ stop' to pause")
-    print("   • Capabilities showcase")
-    print("   • Enhanced entertainment")
-    print("   • Smart wake/sleep system")
-    print()
+    """Main launcher function"""
+    print("🎯 Welcome to RJ Assistant!")
+    print("Choose your preferred version:\n")
     
-    choice = input("Select option (1-6): ").strip()
-    
-    if choice == "1":
-        print("🚀 Starting Super Advanced RJ with GUI...")
-        print("💡 Say 'Hello RJ' to activate!")
-        print("💡 Say 'RJ kya kya kar sakte ho' to see capabilities!")
-        os.system("python3 super_advanced_rj.py")
-    elif choice == "2":
-        print("🚀 Starting Super Advanced RJ in Console Mode...")
-        print("💡 Say 'Hello RJ' to activate!")
-        os.system("python3 super_advanced_rj.py --no-gui")
-    elif choice == "3":
-        print("📱 Starting Advanced RJ with GUI...")
-        os.system("python3 advanced_rj.py")
-    elif choice == "4":
-        print("📱 Starting Advanced RJ in Console Mode...")
-        os.system("python3 advanced_rj.py --no-gui")
-    elif choice == "5":
-        print("📞 Starting Basic RJ Assistant...")
-        os.system("python3 rj_assistant.py")
-    elif choice == "6":
-        print("👋 Goodbye!")
-        sys.exit(0)
-    else:
-        print("❌ Invalid choice. Please select 1-6.")
-        main()
+    while True:
+        show_menu()
+        choice = input("\n📝 Enter your choice (1-7): ").strip()
+        
+        if run_option(choice):
+            # If option ran successfully, ask if user wants to restart
+            restart = input("\n🔄 Start another version? (y/n): ").strip().lower()
+            if restart not in ['y', 'yes', 'haan', 'ha']:
+                print("👋 Thanks for using RJ Assistant!")
+                break
+        else:
+            # If there was an error, continue the loop
+            continue
 
 if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print("\n👋 Goodbye!")
-        sys.exit(0)
+    main()
