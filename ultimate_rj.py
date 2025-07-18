@@ -72,8 +72,8 @@ class UltimateRJ:
         self.wake_commands = ["hello rj", "rj", "hello", "wake up"]
         self.interrupt_commands = ["hello", "rj", "stop", "ruko"]
         
-        # Respectful acknowledgment responses
-        self.acknowledgment_responses = [
+        # Respectful acknowledgment responses for tasks
+        self.task_acknowledgments = [
             "Ok Sir",
             "Yes Sir", 
             "Thik hai Sir",
@@ -83,17 +83,19 @@ class UltimateRJ:
             "Abhi karta hun Sir",
             "Right away Sir",
             "Samjh gaya Sir",
-            "Ho gaya Sir",
-            "Done Sir",
-            "As you wish Sir",
-            "Certainly Sir",
-            "Of course Sir",
-            "Aapka kaam Sir",
-            "Immediately Sir",
             "Zaroor Sir",
             "Main kar deta hun Sir",
             "Task samjh gaya Sir",
             "Perfect Sir"
+        ]
+        
+        # Simple responses for "Hello RJ" calls
+        self.hello_responses = [
+            "Jii Sir",
+            "Yes Sir",
+            "Sir",
+            "Haan Sir",
+            "Batayiye Sir"
         ]
         
         self.setup_command_patterns()
@@ -599,6 +601,11 @@ class UltimateRJ:
                 self.handle_wake_command()
             return
         
+        # Handle simple "Hello RJ" calls when already active
+        if command_lower.strip() in ["hello rj", "rj", "hello"]:
+            self.give_hello_response()
+            return
+        
         # Check for sleep commands
         if any(sleep_cmd in command_lower for sleep_cmd in self.sleep_commands):
             self.handle_sleep_command(command)
@@ -612,7 +619,7 @@ class UltimateRJ:
         # Handle interrupt during speaking
         if self.speaking_mode and any(int_cmd in command_lower for int_cmd in self.interrupt_commands):
             self.speaking_mode = False
-            self.speak("Yes Sir", interruptible=False)
+            self.give_hello_response()
             return
         
         # First give respectful acknowledgment
@@ -2094,9 +2101,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     def give_acknowledgment(self):
         """Give respectful acknowledgment before processing command"""
-        acknowledgment = random.choice(self.acknowledgment_responses)
+        acknowledgment = random.choice(self.task_acknowledgments)
         self.speak(acknowledgment)
         self.log_to_console(f"🫡 {acknowledgment}", 'rj')
+
+    def give_hello_response(self):
+        """Give simple response to Hello RJ calls"""
+        response = random.choice(self.hello_responses)
+        self.speak(response, interruptible=False)
+        self.log_to_console(f"👋 {response}", 'rj')
 
     def ask_doubt_about_screen(self):
         """Ask user about what they see on screen"""
