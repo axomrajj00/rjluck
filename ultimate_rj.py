@@ -1632,6 +1632,21 @@ document.addEventListener('DOMContentLoaded', function() {
         
         return ""
 
+    def extract_website_name(self, command: str) -> str:
+        """Extract website name from command"""
+        # Remove common words to get the website name
+        remove_words = ['open', 'website', 'site', 'page', 'karo', 'dekho', 'chalo', 'jao']
+        words = command.split()
+        filtered_words = [word for word in words if word.lower() not in remove_words]
+        
+        if filtered_words:
+            # Return first word as potential website name
+            website = filtered_words[0].lower()
+            # Remove common extensions if present
+            website = website.replace('.com', '').replace('.in', '').replace('.org', '')
+            return website
+        return ""
+
     def is_system_command(self, command: str) -> bool:
         """Check if command is system related"""
         system_keywords = ['volume', 'scroll', 'shutdown', 'restart', 'brightness', 'lock']
@@ -1723,7 +1738,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     def is_web_command(self, command: str) -> bool:
         """Check if command is web related"""
-        web_keywords = ['youtube', 'google', 'search', 'website', 'browser']
+        web_keywords = ['youtube', 'google', 'facebook', 'instagram', 'twitter', 'whatsapp', 
+                       'linkedin', 'github', 'netflix', 'amazon', 'flipkart', 'search', 
+                       'website', 'browser']
         return any(keyword in command.lower() for keyword in web_keywords)
 
     def auto_handle_web(self, command: str) -> bool:
@@ -1752,7 +1769,61 @@ document.addEventListener('DOMContentLoaded', function() {
                     webbrowser.open("https://www.google.com")
                     self.speak("Sir, Google open kar diya!")
                 return True
+            
+            elif 'facebook' in command:
+                webbrowser.open("https://www.facebook.com")
+                self.speak("Sir, Facebook open kar diya!")
+                return True
+            
+            elif 'instagram' in command:
+                webbrowser.open("https://www.instagram.com")
+                self.speak("Sir, Instagram open kar diya!")
+                return True
                 
+            elif 'twitter' in command:
+                webbrowser.open("https://www.twitter.com")
+                self.speak("Sir, Twitter open kar diya!")
+                return True
+                
+            elif 'whatsapp' in command:
+                webbrowser.open("https://web.whatsapp.com")
+                self.speak("Sir, WhatsApp Web open kar diya!")
+                return True
+                
+            elif 'linkedin' in command:
+                webbrowser.open("https://www.linkedin.com")
+                self.speak("Sir, LinkedIn open kar diya!")
+                return True
+                
+            elif 'github' in command:
+                webbrowser.open("https://www.github.com")
+                self.speak("Sir, GitHub open kar diya!")
+                return True
+                
+            elif 'netflix' in command:
+                webbrowser.open("https://www.netflix.com")
+                self.speak("Sir, Netflix open kar diya!")
+                return True
+                
+            elif 'amazon' in command:
+                webbrowser.open("https://www.amazon.in")
+                self.speak("Sir, Amazon open kar diya!")
+                return True
+                
+            elif 'flipkart' in command:
+                webbrowser.open("https://www.flipkart.com")
+                self.speak("Sir, Flipkart open kar diya!")
+                return True
+                
+            else:
+                # Try to extract website name from command
+                website = self.extract_website_name(command)
+                if website:
+                    url = f"https://www.{website}.com"
+                    webbrowser.open(url)
+                    self.speak(f"Sir, {website} website open kar diya!")
+                    return True
+                    
         except Exception as e:
             self.speak("Sir, website open karne mein problem aaya. Alternative browser try karne ko kahiye.")
             self.suggest_alternatives("youtube" if "youtube" in command else "web", command)
