@@ -60,6 +60,18 @@ class UltimateRJ:
         self.retry_mode = False
         self.retry_suggestions = []
         
+        # Intelligent interaction system
+        self.waiting_for_response = False
+        self.current_question = None
+        self.screen_monitoring = False
+        self.doubt_mode = False
+        self.speaking_mode = False  # Track when RJ is speaking
+        
+        # Sleep mode keywords
+        self.sleep_commands = ["sleep mode", "sala ja", "good bye", "bye", "rest karo", "chup raho"]
+        self.wake_commands = ["hello rj", "rj", "hello", "wake up"]
+        self.interrupt_commands = ["hello", "rj", "stop", "ruko"]
+        
         # Respectful acknowledgment responses
         self.acknowledgment_responses = [
             "Ok Sir",
@@ -88,7 +100,11 @@ class UltimateRJ:
         self.setup_memory_system()
         self.setup_gui()
         
+        # Start background monitoring
+        self.start_background_monitoring()
+        
         print("🎯 Ultimate RJ Assistant initialized!")
+        print("Features: Smart screen monitoring, interrupt support, sleep mode")
         self.speak("Namaste Sir! Main Ultimate RJ hun. Voice ya text - dono mein commands de sakte hain.")
 
     def setup_ai_client(self):
@@ -468,8 +484,8 @@ class UltimateRJ:
         except:
             pass
 
-    def speak(self, text: str):
-        """Enhanced speak with Sir addressing"""
+    def speak(self, text: str, interruptible: bool = True):
+        """Enhanced speak with Sir addressing and interrupt capability"""
         # Always address as Sir
         if not text.lower().startswith('sir'):
             if 'sir' not in text.lower():
@@ -479,8 +495,25 @@ class UltimateRJ:
         self.log_to_console(text, 'rj')
         
         clean_text = re.sub(r'[^\w\s.,!?-]', '', text)
-        self.tts_engine.say(clean_text)
-        self.tts_engine.runAndWait()
+        
+        try:
+            self.speaking_mode = True
+            
+            # Start speaking in a separate thread for interruptibility
+            if interruptible:
+                speaking_thread = threading.Thread(target=self._speak_with_interrupt, args=(clean_text,))
+                speaking_thread.daemon = True
+                speaking_thread.start()
+                speaking_thread.join()
+            else:
+                self.tts_engine.say(clean_text)
+                self.tts_engine.runAndWait()
+                
+            self.speaking_mode = False
+            
+        except Exception as e:
+            print(f"TTS Error: {e}")
+            self.speaking_mode = False
 
     def listen(self) -> Optional[str]:
         """Enhanced voice input"""
@@ -558,12 +591,41 @@ class UltimateRJ:
         if not command:
             return
         
+        command_lower = command.lower()
+        
+        # Handle sleep mode first
+        if self.sleep_mode:
+            if any(wake_cmd in command_lower for wake_cmd in self.wake_commands):
+                self.handle_wake_command()
+            return
+        
+        # Check for sleep commands
+        if any(sleep_cmd in command_lower for sleep_cmd in self.sleep_commands):
+            self.handle_sleep_command(command)
+            return
+        
+        # Handle doubt mode responses
+        if self.doubt_mode and self.waiting_for_response:
+            self.handle_screen_question(command)
+            return
+        
+        # Handle interrupt during speaking
+        if self.speaking_mode and any(int_cmd in command_lower for int_cmd in self.interrupt_commands):
+            self.speaking_mode = False
+            self.speak("Yes Sir", interruptible=False)
+            return
+        
         # First give respectful acknowledgment
         self.give_acknowledgment()
         
         # Check for retry commands
         if self.is_retry_command(command):
             self.handle_retry_command(command)
+            return
+        
+        # Check for screen-related questions
+        if any(word in command_lower for word in ['screen', 'display', 'monitor', 'dikhao']):
+            self.handle_screen_query(command)
             return
         
         self.memory_data['session_stats']['total_tasks'] += 1
@@ -593,6 +655,9 @@ class UltimateRJ:
             if success:
                 self.memory_data['session_stats']['successful_completions'] += 1
                 self.update_status("✅ Task Completed", '#44ff44')
+                
+                # Start screen monitoring after successful tasks
+                self.screen_monitoring = True
             else:
                 # Task failed, enable retry mode
                 self.enable_retry_mode(command)
@@ -1985,11 +2050,235 @@ document.addEventListener('DOMContentLoaded', function() {
         except:
             return False
 
+    def _speak_with_interrupt(self, text: str):
+        """Speak with interrupt capability"""
+        words = text.split()
+        for i, word in enumerate(words):
+            if not self.speaking_mode:  # Check if interrupted
+                break
+            
+            # Speak word by word for interruptibility
+            if i == 0:
+                self.tts_engine.say(word)
+            else:
+                self.tts_engine.say(f" {word}")
+            self.tts_engine.runAndWait()
+            
+            # Small pause between words to check for interrupts
+            time.sleep(0.1)
+
+    def check_for_interrupt(self):
+        """Check if user is trying to interrupt"""
+        try:
+            with self.microphone as source:
+                # Quick listen for interrupt
+                audio = self.recognizer.listen(source, timeout=0.5, phrase_time_limit=2)
+                
+            # Try to recognize interrupt command
+            try:
+                command = self.recognizer.recognize_google(audio, language='en-US')
+                command_lower = command.lower()
+                
+                if any(cmd in command_lower for cmd in self.interrupt_commands):
+                    self.speaking_mode = False  # Stop speaking
+                    self.speak("Yes Sir", interruptible=False)
+                    return True
+                    
+            except:
+                pass
+                
+        except:
+            pass
+        
+        return False
+
     def give_acknowledgment(self):
         """Give respectful acknowledgment before processing command"""
         acknowledgment = random.choice(self.acknowledgment_responses)
         self.speak(acknowledgment)
         self.log_to_console(f"🫡 {acknowledgment}", 'rj')
+
+    def ask_doubt_about_screen(self):
+        """Ask user about what they see on screen"""
+        doubts = [
+            "Sir, aap screen mein kya dekh rahe hain?",
+            "Sir, screen pe koi problem toh nahi?",
+            "Sir, jo screen mein dikhaya ja raha hai, wo thik hai na?",
+            "Sir, screen ki content ke bare mein koi question hai?",
+            "Sir, screen mein jo display ho raha hai, samjh aa raha hai?"
+        ]
+        
+        doubt = random.choice(doubts)
+        self.doubt_mode = True
+        self.waiting_for_response = True
+        self.current_question = doubt
+        self.speak(doubt)
+        self.log_to_console("🤔 RJ is asking about screen content", 'system')
+
+    def handle_screen_question(self, user_response: str):
+        """Handle user's response about screen"""
+        response_lower = user_response.lower()
+        
+        if any(word in response_lower for word in ['yes', 'han', 'haan', 'thik', 'ok', 'good']):
+            self.speak("Sir, great! Agar koi aur help chahiye toh batayiye.")
+        elif any(word in response_lower for word in ['no', 'nahi', 'problem', 'issue']):
+            self.speak("Sir, kya problem hai? Main help kar sakta hun.")
+            self.waiting_for_response = True  # Wait for problem description
+        else:
+            # User described something on screen
+            self.speak("Sir, main samjh gaya. Kya aur help chahiye?")
+        
+        self.doubt_mode = False
+        self.waiting_for_response = False
+        self.current_question = None
+
+    def handle_sleep_command(self, command: str):
+        """Handle sleep mode commands"""
+        sleep_responses = [
+            "Sir, main sleep mode mein ja raha hun. 'Hello RJ' kehke wake up kar sakte hain.",
+            "Sir, rest kar raha hun. Jab zarurat ho toh 'RJ' kehke bulayiye.",
+            "Sir, good night. 'Hello RJ' kehne par wapas active ho jaunga."
+        ]
+        
+        response = random.choice(sleep_responses)
+        self.speak(response, interruptible=False)
+        self.sleep_mode = True
+        self.update_status("😴 Sleep Mode", '#666666')
+        self.log_to_console("💤 RJ entered sleep mode", 'system')
+
+    def handle_wake_command(self):
+        """Handle wake up from sleep mode"""
+        wake_responses = [
+            "Sir, main wapas active hun! Kya kaam hai?",
+            "Sir, good morning! Kaise help kar sakta hun?",
+            "Sir, wake up ho gaya! Commands ready hain."
+        ]
+        
+        response = random.choice(wake_responses)
+        self.sleep_mode = False
+        self.speak(response, interruptible=False)
+        self.update_status("✅ Active", '#44ff44')
+        self.log_to_console("🌅 RJ woke up from sleep mode", 'system')
+
+    def intelligent_screen_monitoring(self):
+        """Intelligent screen content monitoring and doubt asking"""
+        if not self.screen_monitoring or self.doubt_mode:
+            return
+        
+        # Randomly ask doubt about screen (every 2-3 minutes when not busy)
+        if random.randint(1, 100) <= 2:  # 2% chance per check
+            self.ask_doubt_about_screen()
+
+    def handle_screen_query(self, command: str):
+        """Handle screen-related queries from user"""
+        command_lower = command.lower()
+        
+        try:
+            if 'read' in command_lower or 'padho' in command_lower or 'kya likha' in command_lower:
+                # User wants to read screen content
+                self.speak("Sir, screen content read kar raha hun...")
+                screen_text = self.read_screen_content()
+                if screen_text:
+                    self.speak(f"Sir, screen mein ye likha hai: {screen_text[:200]}...")
+                else:
+                    self.speak("Sir, screen content clear nahi dikh raha. Kya specific cheez dekhna chahte hain?")
+                    
+            elif 'screenshot' in command_lower or 'capture' in command_lower:
+                # User wants screenshot
+                self.speak("Sir, screenshot le raha hun...")
+                self.take_screenshot()
+                
+            elif 'translate' in command_lower:
+                # User wants screen content translated
+                self.speak("Sir, screen content translate kar raha hun...")
+                screen_text = self.read_screen_content()
+                if screen_text:
+                    translated = self.translate_screen_text(screen_text)
+                    self.speak(f"Sir, translation: {translated[:200]}...")
+                else:
+                    self.speak("Sir, screen content read nahi kar pa raha.")
+                    
+            else:
+                # General screen question
+                self.ask_doubt_about_screen()
+                
+        except Exception as e:
+            self.speak("Sir, screen analysis mein problem aaya. Kya manually bata sakte hain?")
+            self.log_to_console(f"Screen query error: {e}", 'error')
+
+    def read_screen_content(self) -> str:
+        """Read current screen content using OCR"""
+        try:
+            # Take screenshot
+            screenshot = ImageGrab.grab()
+            
+            # Use OCR to extract text
+            screen_text = pytesseract.image_to_string(screenshot, lang='eng+hin')
+            
+            # Clean and return text
+            return screen_text.strip()
+            
+        except Exception as e:
+            self.log_to_console(f"Screen reading error: {e}", 'error')
+            return ""
+
+    def take_screenshot(self):
+        """Take and save screenshot"""
+        try:
+            screenshot = ImageGrab.grab()
+            screenshot_path = Path.home() / "Desktop" / f"rj_screenshot_{int(time.time())}.png"
+            screenshot.save(screenshot_path)
+            
+            self.speak(f"Sir, screenshot save kar diya: {screenshot_path.name}")
+            self.log_to_console(f"Screenshot saved: {screenshot_path}", 'success')
+            
+        except Exception as e:
+            self.speak("Sir, screenshot save karne mein problem aaya.")
+            self.log_to_console(f"Screenshot error: {e}", 'error')
+
+    def translate_screen_text(self, text: str) -> str:
+        """Translate screen text using AI"""
+        try:
+            system_content = """You are a helpful translator. Translate the given text to simple Hindi/English mix (Hinglish). 
+            Keep the translation natural and easy to understand."""
+            
+            messages = [
+                {"role": "system", "content": system_content},
+                {"role": "user", "content": f"Translate this to Hinglish: {text}"}
+            ]
+            
+            response = self.ai_client.chat.completions.create(
+                model="deepseek-chat",
+                messages=messages,
+                max_tokens=500,
+                temperature=0.3
+            )
+            
+            return response.choices[0].message.content.strip()
+            
+        except Exception as e:
+            self.log_to_console(f"Translation error: {e}", 'error')
+            return "Translation mein problem aaya."
+
+    def start_background_monitoring(self):
+        """Start background monitoring thread"""
+        def monitoring_loop():
+            while self.running:
+                try:
+                    # Check for screen monitoring
+                    if not self.sleep_mode and not self.doubt_mode:
+                        self.intelligent_screen_monitoring()
+                    
+                    # Sleep for 30 seconds between checks
+                    time.sleep(30)
+                    
+                except Exception as e:
+                    self.log_to_console(f"Background monitoring error: {e}", 'error')
+                    time.sleep(60)  # Wait longer on error
+        
+        monitoring_thread = threading.Thread(target=monitoring_loop, daemon=True)
+        monitoring_thread.start()
+        self.log_to_console("🔄 Background monitoring started", 'system')
 
     def run_gui(self):
         """Run the GUI version"""
