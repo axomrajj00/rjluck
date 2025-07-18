@@ -14,10 +14,11 @@ def show_menu():
     print("1. Super Advanced RJ (GUI Mode) - Full features with visual interface")
     print("2. Super Advanced RJ (Console Mode) - Full features, voice only")
     print("3. Text Command RJ - Type commands, smart AI questions")
-    print("4. Advanced RJ (GUI Mode) - Memory + Tasks with GUI")
-    print("5. Advanced RJ (Console Mode) - Memory + Tasks, voice only")
-    print("6. Basic Enhanced RJ - Core features only")
-    print("7. Exit")
+    print("4. Advanced Coding RJ - VS Code, AI coding, ChatGPT, Screen reading")
+    print("5. Advanced RJ (GUI Mode) - Memory + Tasks with GUI")
+    print("6. Advanced RJ (Console Mode) - Memory + Tasks, voice only")
+    print("7. Basic Enhanced RJ - Core features only")
+    print("8. Exit")
     print("=" * 40)
 
 def run_option(choice):
@@ -36,23 +37,27 @@ def run_option(choice):
             subprocess.run([sys.executable, "text_command_rj.py"])
         
         elif choice == "4":
+            print("🚀 Starting Advanced Coding RJ...")
+            subprocess.run([sys.executable, "advanced_coding_rj.py"])
+        
+        elif choice == "5":
             print("🚀 Starting Advanced RJ with GUI...")
             subprocess.run([sys.executable, "advanced_rj.py"])
         
-        elif choice == "5":
+        elif choice == "6":
             print("🚀 Starting Advanced RJ in Console Mode...")
             subprocess.run([sys.executable, "advanced_rj.py", "--no-gui"])
         
-        elif choice == "6":
+        elif choice == "7":
             print("🚀 Starting Basic Enhanced RJ...")
             subprocess.run([sys.executable, "enhanced_jarvis.py"])
         
-        elif choice == "7":
+        elif choice == "8":
             print("👋 Goodbye!")
             sys.exit(0)
         
         else:
-            print("❌ Invalid choice! Please select 1-7")
+            print("❌ Invalid choice! Please select 1-8")
             return False
         
         return True
@@ -72,7 +77,7 @@ def main():
     
     while True:
         show_menu()
-        choice = input("\n📝 Enter your choice (1-7): ").strip()
+        choice = input("\n📝 Enter your choice (1-8): ").strip()
         
         if run_option(choice):
             # If option ran successfully, ask if user wants to restart
