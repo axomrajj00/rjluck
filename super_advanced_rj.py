@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Super Advanced RJ Assistant - Ultimate AI Voice Assistant
-Features: Sleep Mode, Capabilities Showcase, Auto-activation, Advanced Memory
+Features: Sleep Mode, Capabilities Showcase, Auto-activation, Advanced Memory, Short Answer Mode
 """
 
 import os
@@ -25,8 +25,12 @@ import pyttsx3
 from openai import OpenAI
 from dotenv import load_dotenv
 
-# Import GUI
+# Import GUI and extra features
 from rj_gui import create_gui_for_rj
+try:
+    from extra_features import extra_features
+except ImportError:
+    extra_features = None
 
 # Load environment variables
 load_dotenv()
@@ -39,6 +43,7 @@ class SuperAdvancedRJ:
         self.running = True
         self.listening = False
         self.sleep_mode = False
+        self.short_answer_mode = False  # New: Short answer mode
         self.last_activity_time = time.time()
         self.sleep_timeout = 30  # 30 seconds
         
@@ -46,6 +51,19 @@ class SuperAdvancedRJ:
         self.wake_words = ["hello rj", "rj", "hello"]
         self.stop_words = ["rj stop", "rj band kar", "stop rj"]
         self.sleep_words = ["rj sleep", "rj so ja", "sleep rj"]
+        
+        # Short answer mode triggers
+        self.short_mode_triggers = [
+            "short me answer do", "sort me answer do", "short answer do",
+            "sirf answer do", "bas answer batao", "short me batao",
+            "concise answer", "brief me bolo", "seedha jawab do"
+        ]
+        
+        # Exit short mode triggers
+        self.normal_mode_triggers = [
+            "normal mode", "detail me batao", "full answer do",
+            "complete answer", "normal answer mode", "detailed me bolo"
+        ]
         
         self.conversation_history = []
         self.setup_command_patterns()
@@ -66,7 +84,7 @@ class SuperAdvancedRJ:
         self.start_sleep_monitor()
         
         print("🎙️ Super Advanced RJ Assistant initialized!")
-        self.speak("Namaste! Main Super Advanced RJ hun. 'Hello RJ' kehkar mujhe activate kar sakte hain. Main bahut kuch kar sakta hun!")
+        self.speak("Namaste! Main Super Advanced RJ hun. 'Hello RJ' kehkar activate kariye. 'Short me answer do' kehkar concise mode activate kar sakte hain!")
 
     def setup_advanced_features(self):
         """Setup advanced features"""
@@ -118,7 +136,8 @@ class SuperAdvancedRJ:
                 "Voice pattern recognition",
                 "Context-aware responses",
                 "Learning user preferences",
-                "Multilingual conversation"
+                "Multilingual conversation",
+                "Short answer mode for concise responses"
             ]
         }
         
@@ -130,6 +149,17 @@ class SuperAdvancedRJ:
             "Kya help chahiye aapko?",
             "Main yahan hun, batayiye"
         ]
+        
+        # Short responses for different situations
+        self.short_responses = {
+            "activated": "Ready!",
+            "memory_stored": "Saved!",
+            "task_added": "Added!",
+            "command_executed": "Done!",
+            "not_found": "Not found!",
+            "error": "Error!",
+            "success": "Success!"
+        }
 
     def setup_ai_client(self):
         """Setup OpenAI client for DeepSeek API"""
@@ -184,6 +214,10 @@ class SuperAdvancedRJ:
         self.patterns = {
             'capabilities': {
                 'show_capabilities': r'kya kya kar sakte ho|what can you do|capabilities|features|tumhare pas kya hai|tum kya kar sakte ho'
+            },
+            'answer_mode': {
+                'short_mode': r'short me answer do|sort me answer do|short answer|sirf answer|bas answer|seedha jawab|concise answer|brief me bolo',
+                'normal_mode': r'normal mode|detail me batao|full answer|complete answer|detailed me bolo|normal answer'
             },
             'memory_commands': {
                 'remember': r'yaad rakh|remember|store|save memory',
@@ -249,7 +283,9 @@ class SuperAdvancedRJ:
             self.memory_data = {
                 'memories': [],
                 'tasks': [],
-                'user_preferences': {},
+                'user_preferences': {
+                    'short_answer_mode': False
+                },
                 'session_stats': {
                     'total_commands': 0,
                     'favorite_commands': {},
@@ -262,8 +298,50 @@ class SuperAdvancedRJ:
     def save_memory(self):
         """Save memory to JSON file"""
         self.memory_data['last_updated'] = datetime.now().isoformat()
+        self.memory_data['user_preferences']['short_answer_mode'] = self.short_answer_mode
         with open(self.memory_file, 'w', encoding='utf-8') as f:
             json.dump(self.memory_data, f, ensure_ascii=False, indent=2)
+
+    def toggle_short_answer_mode(self, enable: bool = None):
+        """Toggle short answer mode"""
+        if enable is None:
+            self.short_answer_mode = not self.short_answer_mode
+        else:
+            self.short_answer_mode = enable
+        
+        # Save preference
+        self.save_memory()
+        
+        # Notify user
+        if self.short_answer_mode:
+            response = "Short answer mode ON!" if not self.short_answer_mode else "ON!"
+            if self.gui:
+                self.gui.log_to_console("📝 Short answer mode activated", "info")
+        else:
+            response = "Normal answer mode activated. Full detailed responses enabled."
+            if self.gui:
+                self.gui.log_to_console("📝 Normal answer mode activated", "info")
+        
+        self.speak(response)
+
+    def get_short_response(self, response_type: str, custom_text: str = "") -> str:
+        """Get appropriate short response"""
+        if not self.short_answer_mode:
+            return custom_text
+        
+        base_response = self.short_responses.get(response_type, "Done!")
+        
+        if custom_text and len(custom_text) < 50:  # Keep very short responses as is
+            return custom_text
+        elif custom_text:
+            # Extract key information for short response
+            words = custom_text.split()
+            if len(words) <= 5:
+                return custom_text
+            else:
+                return base_response
+        else:
+            return base_response
 
     def start_sleep_monitor(self):
         """Monitor for sleep mode activation"""
@@ -287,9 +365,6 @@ class SuperAdvancedRJ:
         if self.gui:
             self.gui.update_status("Sleep Mode")
             self.gui.log_to_console("😴 Entering sleep mode. Say 'Hello RJ' to wake up.", "warning")
-        
-        # Optional: Speak sleep message
-        # self.speak("Main sleep mode mein ja raha hun. 'Hello RJ' kehkar mujhe jagayiye.")
 
     def wake_up(self):
         """Wake up from sleep mode"""
@@ -302,18 +377,27 @@ class SuperAdvancedRJ:
                 self.gui.update_status("Active")
                 self.gui.log_to_console("😊 Waking up! Ready for commands.", "success")
             
-            # Random wake up response
-            wake_responses = [
-                "Haan ji, main aa gaya!",
-                "Ready hun sir!",
-                "Kya kaam hai boss?",
-                "Main yahan hun, boliye!",
-                "Jagaya aapne, kya help chahiye?"
-            ]
+            # Response based on mode
+            if self.short_answer_mode:
+                wake_responses = ["Ready!", "Yes?", "Here!", "Active!"]
+            else:
+                wake_responses = [
+                    "Haan ji, main aa gaya!",
+                    "Ready hun sir!",
+                    "Kya kaam hai boss?",
+                    "Main yahan hun, boliye!",
+                    "Jagaya aapne, kya help chahiye?"
+                ]
             self.speak(random.choice(wake_responses))
 
     def show_capabilities(self):
-        """Show all capabilities to user"""
+        """Show all capabilities to user with short/normal mode support"""
+        if self.short_answer_mode:
+            # Short version
+            self.speak("System control, memory, tasks, info, entertainment, productivity, short answers!")
+            return
+        
+        # Full version
         response = "Main ye sab kar sakta hun:\n\n"
         
         for category, features in self.capabilities.items():
@@ -328,34 +412,40 @@ class SuperAdvancedRJ:
         response += "• 'RJ task add kar workout 30 minutes'\n"
         response += "• 'RJ Wikipedia India'\n"
         response += "• 'RJ joke sunao'\n"
-        response += "• 'RJ weather batao'\n"
-        response += "• 'RJ calculator kholo'\n"
+        response += "• 'RJ short me answer do' - for concise responses\n"
         
         if self.gui:
             self.gui.log_to_console("📋 Showing capabilities...", "info")
         
-        # Speak summarized version
-        speak_text = "Main bahut kuch kar sakta hun - System control, memory management, task management, Wikipedia search, entertainment, productivity tools, aur bahut kuch! Kya kaam hai aapka?"
+        speak_text = "Main bahut kuch kar sakta hun - System control, memory management, task management, Wikipedia search, entertainment, productivity tools, aur short answer mode bhi! Kya kaam hai aapka?"
         self.speak(speak_text)
-        
-        return response
 
     def get_weather_info(self, city="Delhi"):
-        """Get weather information (mock implementation)"""
-        try:
-            # This is a mock implementation - you can integrate with actual weather API
-            weather_responses = [
-                f"{city} mein aaj dhoop hai, temperature around 25 degree hai",
-                f"{city} mein light clouds hain, pleasant weather hai",
-                f"{city} mein thoda garmi hai, 28 degree temperature hai",
-                f"{city} mein sahi weather hai, 22 degree pleasant temperature"
-            ]
-            return random.choice(weather_responses)
-        except:
-            return "Weather information nahi mil paya, sorry!"
+        """Get weather information with short mode support"""
+        weather_responses = [
+            f"{city} mein aaj dhoop hai, temperature around 25 degree hai",
+            f"{city} mein light clouds hain, pleasant weather hai",
+            f"{city} mein thoda garmi hai, 28 degree temperature hai",
+            f"{city} mein sahi weather hai, 22 degree pleasant temperature"
+        ]
+        full_response = random.choice(weather_responses)
+        
+        if self.short_answer_mode:
+            return "25°C, sunny"  # Short version
+        return full_response
 
     def get_random_joke(self):
-        """Get random joke"""
+        """Get random joke with short mode support"""
+        if self.short_answer_mode:
+            short_jokes = [
+                "Wifi slow hai? Password '12345678' try karo!",
+                "Doctor: Exercise karo. Patient: Typing exercise chalega?",
+                "Wife angry? Say 'You're right' - universal solution!",
+                "Boss late? Traffic jam excuse ready rakho!"
+            ]
+            return random.choice(short_jokes)
+        
+        # Full jokes (existing ones)
         jokes = [
             "Teacher: Tumhara homework kahan hai? Student: Ghar pe. Teacher: Kyun nahi laye? Student: Aap ne sirf kahan hai poocha tha, lao nahi kaha tha!",
             "Wife: Tumhe pata hai main kitni sundar hun? Husband: Haan, itni sundar ho ke bhi mujhe mil gayi!",
@@ -366,7 +456,17 @@ class SuperAdvancedRJ:
         return random.choice(jokes)
 
     def get_interesting_fact(self):
-        """Get interesting fact"""
+        """Get interesting fact with short mode support"""
+        if self.short_answer_mode:
+            short_facts = [
+                "Octopus ke 3 hearts hain!",
+                "Honey kabhi expire nahi hota!",
+                "Sharks dinosaurs se older hain!",
+                "Brain 20% energy use karta hai!"
+            ]
+            return random.choice(short_facts)
+        
+        # Full facts (existing ones)
         facts = [
             "Kya aap jaante hain? Octopus ke teen dil hote hain!",
             "Sharks, dinosaurs se bhi purane hain - 400 million years old!",
@@ -382,10 +482,8 @@ class SuperAdvancedRJ:
         """Listen specifically for wake words"""
         try:
             with self.microphone as source:
-                # Shorter timeout for wake word detection
                 audio = self.recognizer.listen(source, timeout=2, phrase_time_limit=5)
             
-            # Try Hindi first, then English
             try:
                 text = self.recognizer.recognize_google(audio, language='hi-IN').lower()
                 return text
@@ -407,7 +505,8 @@ class SuperAdvancedRJ:
             self.last_activity_time = time.time()
             
             if self.gui:
-                self.gui.update_status("Listening...")
+                status = "Listening (Short Mode)" if self.short_answer_mode else "Listening"
+                self.gui.update_status(status)
             
             with self.microphone as source:
                 print("🎤 Sun raha hun...")
@@ -415,7 +514,6 @@ class SuperAdvancedRJ:
             
             print("🔄 Samajh raha hun...")
             
-            # Try Hindi first, then English
             try:
                 text = self.recognizer.recognize_google(audio, language='hi-IN').lower()
                 print(f"👤 Aapne kaha (Hindi): {text}")
@@ -440,7 +538,8 @@ class SuperAdvancedRJ:
         finally:
             self.listening = False
             if self.gui:
-                self.gui.update_status("Ready")
+                status = "Ready (Short Mode)" if self.short_answer_mode else "Ready"
+                self.gui.update_status(status)
 
     def speak(self, text: str):
         """Enhanced speak with sleep mode awareness"""
@@ -450,7 +549,8 @@ class SuperAdvancedRJ:
         print(f"🗣️ RJ: {text}")
         
         if self.gui:
-            self.gui.log_to_console(f"RJ: {text}", "system")
+            mode_indicator = " [SHORT]" if self.short_answer_mode else ""
+            self.gui.log_to_console(f"RJ{mode_indicator}: {text}", "system")
         
         clean_text = re.sub(r'[^\w\s.,!?-]', '', text)
         self.tts_engine.say(clean_text)
@@ -459,7 +559,7 @@ class SuperAdvancedRJ:
         self.last_activity_time = time.time()
 
     def process_super_command(self, command: str):
-        """Process command with all advanced features"""
+        """Process command with all advanced features including short answer mode"""
         command = command.lower().strip()
         
         # Update activity time
@@ -468,9 +568,19 @@ class SuperAdvancedRJ:
         # Update session stats
         self.memory_data['session_stats']['total_commands'] += 1
         
+        # Check for answer mode commands first
+        if any(trigger in command for trigger in self.short_mode_triggers):
+            self.toggle_short_answer_mode(True)
+            return
+        
+        if any(trigger in command for trigger in self.normal_mode_triggers):
+            self.toggle_short_answer_mode(False)
+            return
+        
         # Check for stop commands
         if any(stop_word in command for stop_word in self.stop_words):
-            self.speak("Commands stop kar raha hun. 'Hello RJ' kehkar activate kar sakte hain.")
+            response = "Stopped!" if self.short_answer_mode else "Commands stop kar raha hun. 'Hello RJ' kehkar activate kar sakte hain."
+            self.speak(response)
             self.listening = False
             if self.gui:
                 self.gui.update_status("Stopped")
@@ -478,7 +588,8 @@ class SuperAdvancedRJ:
 
         # Check for sleep commands
         if any(sleep_word in command for sleep_word in self.sleep_words):
-            self.speak("Sleep mode mein ja raha hun. 'Hello RJ' kehkar jagayiye.")
+            response = "Sleeping!" if self.short_answer_mode else "Sleep mode mein ja raha hun. 'Hello RJ' kehkar jagayiye."
+            self.speak(response)
             self.enter_sleep_mode()
             return
 
@@ -487,21 +598,23 @@ class SuperAdvancedRJ:
         for wake_word in self.wake_words:
             if wake_word in command:
                 wake_word_found = True
-                # Remove wake word from command
                 command = command.replace(wake_word, "").strip()
                 break
         
         if not wake_word_found and not self.listening:
-            return  # Ignore commands without wake word when not actively listening
-        
+            return
+
         # Wake up if in sleep mode
         if self.sleep_mode:
             self.wake_up()
-            if not command:  # If only wake word was said
+            if not command:
                 return
 
         if not command:
-            response = random.choice(self.fun_responses)
+            if self.short_answer_mode:
+                response = random.choice(["Yes?", "Ready!", "What?"])
+            else:
+                response = random.choice(self.fun_responses)
             self.speak(response)
             return
 
@@ -529,12 +642,18 @@ class SuperAdvancedRJ:
         
         if re.search(self.patterns['information']['time'], command):
             current_time = datetime.now().strftime("%H:%M")
-            self.speak(f"Abhi time hai {current_time}")
+            if self.short_answer_mode:
+                self.speak(current_time)
+            else:
+                self.speak(f"Abhi time hai {current_time}")
             return
         
         if re.search(self.patterns['information']['date'], command):
             current_date = datetime.now().strftime("%d %B %Y")
-            self.speak(f"Aaj ki date hai {current_date}")
+            if self.short_answer_mode:
+                self.speak(current_date)
+            else:
+                self.speak(f"Aaj ki date hai {current_date}")
             return
 
         # Memory commands
@@ -575,7 +694,8 @@ class SuperAdvancedRJ:
 
         # Exit commands
         if any(word in command for word in ["exit", "quit", "stop", "goodbye", "alvida", "bye"]):
-            self.speak("Alvida! Super RJ band ho raha hai. Sab data save kar diya hai!")
+            response = "Bye!" if self.short_answer_mode else "Alvida! Super RJ band ho raha hai. Sab data save kar diya hai!"
+            self.speak(response)
             self.running = False
             return
 
@@ -584,24 +704,30 @@ class SuperAdvancedRJ:
         self.speak(ai_response)
 
     def handle_memory_command(self, command: str):
-        """Handle memory-related commands"""
+        """Handle memory-related commands with short mode support"""
         if re.search(self.patterns['memory_commands']['remember'], command):
             content_match = re.search(r'(?:yaad rakh|remember|store)\s+(.+)', command)
             if content_match:
                 content = content_match.group(1)
                 self.add_memory(content, "user_note")
-                self.speak(f"Yaad rakh liya: {content}")
+                response = "Saved!" if self.short_answer_mode else f"Yaad rakh liya: {content}"
+                self.speak(response)
             else:
-                self.speak("Kya yaad rakhna hai?")
+                response = "What?" if self.short_answer_mode else "Kya yaad rakhna hai?"
+                self.speak(response)
         
         elif re.search(self.patterns['memory_commands']['forget'], command):
             forget_match = re.search(r'(?:bhool ja|forget|remove)\s+(.+)', command)
             if forget_match:
                 content = forget_match.group(1)
                 result = self.remove_memory(content)
-                self.speak(result)
+                if self.short_answer_mode:
+                    self.speak("Removed!" if "remove" in result else "Not found!")
+                else:
+                    self.speak(result)
             else:
-                self.speak("Kya bhoolna hai?")
+                response = "What to forget?" if self.short_answer_mode else "Kya bhoolna hai?"
+                self.speak(response)
         
         elif re.search(self.patterns['memory_commands']['recall'], command):
             search_match = re.search(r'(?:yaad hai|remember|recall)\s+(.+)', command)
@@ -609,15 +735,26 @@ class SuperAdvancedRJ:
                 query = search_match.group(1)
                 memories = self.search_memory(query)
                 if memories:
-                    self.speak(f"Haan yaad hai: {memories[0]['content']}")
+                    if self.short_answer_mode:
+                        # Extract key info from memory
+                        content = memories[0]['content']
+                        words = content.split()
+                        short_content = ' '.join(words[:8]) + ("..." if len(words) > 8 else "")
+                        self.speak(short_content)
+                    else:
+                        self.speak(f"Haan yaad hai: {memories[0]['content']}")
                 else:
-                    self.speak(f"{query} ke bare mein koi memory nahi hai")
+                    response = "No memory!" if self.short_answer_mode else f"{query} ke bare mein koi memory nahi hai"
+                    self.speak(response)
             else:
                 count = len(self.memory_data['memories'])
-                self.speak(f"Total {count} memories hai mere paas")
+                if self.short_answer_mode:
+                    self.speak(f"{count} memories")
+                else:
+                    self.speak(f"Total {count} memories hai mere paas")
 
     def handle_task_command(self, command: str):
-        """Handle task-related commands"""
+        """Handle task-related commands with short mode support"""
         if re.search(self.patterns['task_commands']['add_task'], command):
             task_match = re.search(r'(?:task add kar|new task|task banao)\s+(.+)', command)
             if task_match:
@@ -629,56 +766,67 @@ class SuperAdvancedRJ:
                     task_desc = re.sub(r'\s*\d+\s*(?:minute|min)\s*', '', task_desc)
                 
                 self.add_task(task_desc, timer_minutes)
-                if timer_minutes > 0:
-                    self.speak(f"Task add kar diya {timer_minutes} minute timer ke saath")
+                if self.short_answer_mode:
+                    self.speak("Added!")
                 else:
-                    self.speak("Task add kar diya")
+                    if timer_minutes > 0:
+                        self.speak(f"Task add kar diya {timer_minutes} minute timer ke saath")
+                    else:
+                        self.speak("Task add kar diya")
             else:
-                self.speak("Kya task add karna hai?")
+                response = "Task details?" if self.short_answer_mode else "Kya task add karna hai?"
+                self.speak(response)
         
         elif re.search(self.patterns['task_commands']['show_tasks'], command):
             tasks = self.memory_data['tasks']
             if tasks:
                 pending = [t for t in tasks if not t.get('completed')]
-                self.speak(f"Total {len(tasks)} tasks, {len(pending)} pending")
+                if self.short_answer_mode:
+                    self.speak(f"{len(pending)} pending")
+                else:
+                    self.speak(f"Total {len(tasks)} tasks, {len(pending)} pending")
             else:
-                self.speak("Koi tasks nahi hain")
+                response = "No tasks!" if self.short_answer_mode else "Koi tasks nahi hain"
+                self.speak(response)
 
     def handle_timer_command(self, command: str):
-        """Handle timer commands"""
+        """Handle timer commands with short mode support"""
         timer_match = re.search(r'(\d+)\s*(?:minute|min)', command)
         if timer_match:
             minutes = int(timer_match.group(1))
             self.add_task(f"Timer for {minutes} minutes", minutes)
-            self.speak(f"{minutes} minute ka timer laga diya")
+            if self.short_answer_mode:
+                self.speak(f"{minutes}min timer set!")
+            else:
+                self.speak(f"{minutes} minute ka timer laga diya")
         else:
-            self.speak("Kitne minute ka timer?")
+            response = "How many minutes?" if self.short_answer_mode else "Kitne minute ka timer?"
+            self.speak(response)
 
     def handle_system_command(self, command_type: str, command: str):
-        """Handle system control commands"""
+        """Handle system control commands with short mode support"""
         if command_type == 'volume_up':
             subprocess.run(['amixer', '-D', 'pulse', 'sset', 'Master', '10%+'], capture_output=True)
-            self.speak("Volume badh gaya")
+            response = "Volume up!" if self.short_answer_mode else "Volume badh gaya"
+            self.speak(response)
         elif command_type == 'volume_down':
             subprocess.run(['amixer', '-D', 'pulse', 'sset', 'Master', '10%-'], capture_output=True)
-            self.speak("Volume kam ho gaya")
+            response = "Volume down!" if self.short_answer_mode else "Volume kam ho gaya"
+            self.speak(response)
         elif command_type == 'mute':
             subprocess.run(['amixer', '-D', 'pulse', 'sset', 'Master', 'toggle'], capture_output=True)
-            self.speak("Audio toggle kar diya")
-        elif command_type == 'brightness_up':
-            subprocess.run(['xrandr', '--output', 'HDMI-1', '--brightness', '1.2'], capture_output=True)
-            self.speak("Brightness badh gayi")
-        elif command_type == 'brightness_down':
-            subprocess.run(['xrandr', '--output', 'HDMI-1', '--brightness', '0.8'], capture_output=True)
-            self.speak("Brightness kam ho gayi")
+            response = "Muted!" if self.short_answer_mode else "Audio toggle kar diya"
+            self.speak(response)
         elif command_type == 'lock':
             subprocess.run(['loginctl', 'lock-session'], capture_output=True)
-            self.speak("Screen lock kar diya")
+            response = "Locked!" if self.short_answer_mode else "Screen lock kar diya"
+            self.speak(response)
         else:
-            self.speak("System command execute kar raha hun")
+            response = "Done!" if self.short_answer_mode else "System command execute kar raha hun"
+            self.speak(response)
 
     def handle_wikipedia_command(self, command: str):
-        """Handle Wikipedia commands"""
+        """Handle Wikipedia commands with short mode support"""
         patterns = [
             r'wikipedia\s+(.+)',
             r'wiki\s+(.+)',
@@ -691,11 +839,20 @@ class SuperAdvancedRJ:
             if match:
                 query = match.group(1).strip()
                 wiki_result = self.search_wikipedia(query)
-                self.speak(wiki_result)
+                
+                if self.short_answer_mode:
+                    # Extract first sentence only
+                    sentences = wiki_result.split('.')
+                    short_result = sentences[0] + "." if sentences else wiki_result
+                    if len(short_result) > 100:
+                        short_result = short_result[:97] + "..."
+                    self.speak(short_result)
+                else:
+                    self.speak(wiki_result)
                 return
 
     def handle_application_command(self, command: str):
-        """Handle application launching"""
+        """Handle application launching with short mode support"""
         app_map = {
             'calculator': 'gnome-calculator',
             'calc': 'gnome-calculator',
@@ -713,28 +870,33 @@ class SuperAdvancedRJ:
             if app_name in command:
                 try:
                     subprocess.Popen([app_cmd])
-                    self.speak(f"{app_name} khol raha hun")
+                    response = f"Opening {app_name}!" if self.short_answer_mode else f"{app_name} khol raha hun"
+                    self.speak(response)
                 except:
-                    self.speak(f"{app_name} nahi khul paya")
+                    response = "Error!" if self.short_answer_mode else f"{app_name} nahi khul paya"
+                    self.speak(response)
                 return
 
     def handle_web_command(self, command: str):
-        """Handle web browsing commands"""
+        """Handle web browsing commands with short mode support"""
         if 'youtube' in command:
             webbrowser.open("https://www.youtube.com")
-            self.speak("YouTube khol raha hun")
+            response = "YouTube opened!" if self.short_answer_mode else "YouTube khol raha hun"
+            self.speak(response)
         elif 'google' in command or 'search' in command:
             search_match = re.search(r'(?:search|dhundho|google par search kar)\s+(.+)', command)
             if search_match:
                 query = search_match.group(1)
                 search_url = f"https://www.google.com/search?q={query.replace(' ', '+')}"
                 webbrowser.open(search_url)
-                self.speak(f"Google par {query} search kar raha hun")
+                response = f"Searching {query}!" if self.short_answer_mode else f"Google par {query} search kar raha hun"
+                self.speak(response)
             else:
                 webbrowser.open("https://www.google.com")
-                self.speak("Google khol raha hun")
+                response = "Google opened!" if self.short_answer_mode else "Google khol raha hun"
+                self.speak(response)
 
-    # Memory and Task methods (same as before but optimized)
+    # Memory and Task methods (keeping existing functionality)
     def add_memory(self, content: str, memory_type: str = "note"):
         """Add memory to JSON storage"""
         memory_entry = {
@@ -797,7 +959,10 @@ class SuperAdvancedRJ:
         """Start timer for a task"""
         def timer_thread():
             time.sleep(minutes * 60)
-            self.speak(f"Timer complete! Task {task_id} ka time ho gaya.")
+            if self.short_answer_mode:
+                self.speak(f"Timer {task_id} done!")
+            else:
+                self.speak(f"Timer complete! Task {task_id} ka time ho gaya.")
             if self.gui:
                 self.gui.log_to_console(f"⏰ Timer completed for task {task_id}", "warning")
         
@@ -814,7 +979,10 @@ class SuperAdvancedRJ:
                         not task.get('timer_notified') and
                         current_time >= task['timer_end']):
                         
-                        self.speak(f"Timer complete! Task '{task['description']}' ka time ho gaya.")
+                        if self.short_answer_mode:
+                            self.speak(f"Timer done!")
+                        else:
+                            self.speak(f"Timer complete! Task '{task['description']}' ka time ho gaya.")
                         task['timer_notified'] = True
                         self.save_memory()
                 
@@ -843,17 +1011,16 @@ class SuperAdvancedRJ:
             return f"Wikipedia search mein problem: {str(e)}"
 
     def get_ai_response(self, user_input: str, context: str = "") -> str:
-        """Get AI response with enhanced context"""
+        """Get AI response with enhanced context and short mode support"""
         try:
-            messages = [
-                {
-                    "role": "system",
-                    "content": """You are Super Advanced RJ, the ultimate AI assistant that speaks perfect Hinglish. 
-                    You have advanced capabilities including memory, task management, entertainment, and system control.
-                    Always respond in a friendly, helpful Hinglish tone. You're smart, capable, and ready to help with anything.
-                    Keep responses conversational and engaging."""
-                }
-            ]
+            system_content = """You are Super Advanced RJ, the ultimate AI assistant that speaks perfect Hinglish. 
+            You have advanced capabilities including memory, task management, entertainment, and system control.
+            Always respond in a friendly, helpful Hinglish tone. You're smart, capable, and ready to help with anything."""
+            
+            if self.short_answer_mode:
+                system_content += "\n\nIMPORTANT: User has enabled SHORT ANSWER MODE. Give very brief, concise responses - maximum 1-2 sentences. No extra explanation unless specifically asked."
+            
+            messages = [{"role": "system", "content": system_content}]
             
             # Add recent memories and user preferences
             recent_memories = self.memory_data['memories'][-3:] if self.memory_data['memories'] else []
@@ -870,7 +1037,7 @@ class SuperAdvancedRJ:
             response = self.ai_client.chat.completions.create(
                 model="deepseek-chat",
                 messages=messages,
-                max_tokens=400,
+                max_tokens=150 if self.short_answer_mode else 400,
                 temperature=0.7
             )
             
@@ -886,16 +1053,18 @@ class SuperAdvancedRJ:
             return ai_response
             
         except Exception as e:
+            if self.short_answer_mode:
+                return "AI error!"
             return "Maaf kijiye, main abhi AI service se connect nahi kar pa raha."
 
     def run_with_sleep_mode(self):
         """Main run loop with sleep mode support"""
-        self.speak("Super Advanced RJ ready hai! 'Hello RJ' kehkar activate kariye. 30 second baad main sleep mode mein chala jaunga.")
+        initial_msg = "Super Advanced RJ ready hai! 'Hello RJ' kehkar activate kariye. 'Short me answer do' kehkar concise mode on kar sakte hain!"
+        self.speak(initial_msg)
         
         while self.running:
             try:
                 if self.sleep_mode:
-                    # In sleep mode, only listen for wake words
                     wake_input = self.listen_for_wake_word()
                     if wake_input:
                         for wake_word in self.wake_words:
@@ -903,7 +1072,6 @@ class SuperAdvancedRJ:
                                 self.wake_up()
                                 break
                 else:
-                    # Normal operation
                     user_input = self.listen()
                     if user_input:
                         self.process_super_command(user_input)
