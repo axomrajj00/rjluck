@@ -1,192 +1,321 @@
-# RJ Assistant - Personal AI Voice Assistant
+# 🎙️ Advanced RJ Assistant - Complete AI Voice Assistant
 
-🎙️ **RJ** is your personal AI assistant that speaks Hindi and English (Hinglish) and can control your laptop with voice commands.
+**Advanced RJ** is your fully-featured personal AI assistant with **JARVIS-style GUI**, **JSON memory system**, **task management**, **timers**, and **Hindi-English (Hinglish)** voice commands.
 
-## ✨ Features
+## ✨ **New Advanced Features**
 
-### 🗣️ **Voice Recognition**
-- Hindi and English voice commands
-- Natural Hinglish conversation
-- Smart wake word detection ("RJ")
+### 🖥️ **JARVIS-Style GUI Interface**
+- **Animated AI face** with speaking indicators
+- **Real-time console** with color-coded logs
+- **Memory bank** display showing all stored memories
+- **Task manager** with timer countdown
+- **Control panel** with voice commands
+- **Dark theme** with cyan accents
+
+### 🧠 **JSON Memory System**
+- **Persistent memory** stored in `rj_memory.json`
+- **Smart categorization** (notes, Wikipedia, tasks)
+- **Search and recall** any stored information
+- **Memory removal** by keyword
+- **Timestamped entries** with metadata
+
+### 📋 **Advanced Task Management**
+- **Task creation** with voice commands
+- **Timer integration** (e.g., "30 minute task")
+- **Completion tracking** with timestamps
+- **Visual task list** in GUI
+- **Automatic notifications** when timers complete
+- **Task persistence** across sessions
+
+### ⏰ **Smart Timer System**
+- **Voice-activated timers** ("RJ timer laga 15 minutes")
+- **Background monitoring** with notifications
+- **Multiple concurrent timers**
+- **Task-linked timers** 
+- **Audio alerts** when complete
+
+## 🚀 **Quick Start**
+
+### 1. **Easy Setup**
+```bash
+# Run the setup script
+chmod +x setup.sh
+./setup.sh
+
+# Or use the launcher
+python3 run_rj.py
+```
+
+### 2. **Start Advanced RJ**
+```bash
+# GUI Mode (Recommended)
+python3 advanced_rj.py
+
+# Console Mode
+python3 advanced_rj.py --no-gui
+
+# Or use launcher
+python3 run_rj.py
+```
+
+## 🎤 **Advanced Voice Commands**
+
+### 🧠 **Memory Commands**
+- **"RJ yaad rakh meeting tomorrow 2 PM"** - Store memory
+- **"RJ bhool ja password"** - Remove memory containing "password"
+- **"RJ yaad hai WiFi password"** - Recall specific memory
+- **"RJ batao memory"** - Show all memories
+
+### 📋 **Task Management**
+- **"RJ task add kar complete report 30 minutes"** - Add task with timer
+- **"RJ new task call client"** - Add simple task
+- **"RJ tasks dikhao"** - Show all tasks
+- **"RJ task complete kar"** - Mark task as done
+
+### ⏰ **Timer Commands**
+- **"RJ timer laga 15 minutes"** - Set 15-minute timer
+- **"RJ alarm laga 5 minutes workout"** - Named timer
+- **"RJ timer band kar"** - Stop active timers
+
+### 📚 **Knowledge & Search**
+- **"RJ Wikipedia India"** - Search Wikipedia (stored in memory)
+- **"RJ batao Python ke bare mein"** - Get information
+- **"RJ kya hai artificial intelligence"** - Ask questions
+- **"RJ Google par search kar best restaurants"** - Web search
 
 ### 🖥️ **System Control**
-- Shutdown, restart, sleep, lock computer
-- Volume control (up, down, mute)
-- Application launching and closing
-
-### 📁 **File Management**
-- Create, rename, delete files
-- Open files and folders
-- File operations with voice commands
-
-### 🌐 **Web Integration**
-- Google search with voice
-- YouTube search and navigation
-- Website opening
-- **Wikipedia integration** for instant information
-
-### 📝 **Text Operations**
-- Built-in text editor
-- Voice note taking
-- File reading and editing
-
-### 🤖 **AI Powered**
-- DeepSeek AI integration
-- Contextual conversations
-- Smart question answering
-
-## 🚀 Quick Setup
-
-### 1. Clone and Setup
-```bash
-# Make setup script executable
-chmod +x setup.sh
-
-# Run setup (installs all dependencies)
-./setup.sh
-```
-
-### 2. Configure API Key
-Your DeepSeek API key is already configured in `.env` file.
-
-### 3. Start RJ Assistant
-```bash
-python3 rj_assistant.py
-```
-
-## 🎤 Voice Commands
-
-### System Control
-- **"RJ shutdown"** / **"RJ computer band kar"** - Shutdown system
-- **"RJ restart"** / **"RJ dubara start kar"** - Restart system
 - **"RJ volume badhao"** - Increase volume
-- **"RJ volume kam kar"** - Decrease volume
-- **"RJ mute kar"** - Toggle mute
+- **"RJ calculator kholo"** - Open applications
+- **"RJ computer lock kar"** - Lock screen
+- **"RJ shutdown kar"** - System shutdown
 
-### Applications
-- **"RJ calculator kholo"** - Open calculator
-- **"RJ text editor kholo"** - Open text editor
-- **"RJ browser kholo"** - Open web browser
-- **"RJ terminal kholo"** - Open terminal
+## 🖼️ **GUI Features**
 
-### Information & Search
-- **"RJ Wikipedia Mahatma Gandhi"** - Search Wikipedia
-- **"RJ kya hai artificial intelligence"** - Ask questions
-- **"RJ batao India ke bare mein"** - Get information
-- **"RJ Google par search kar Python programming"** - Google search
+### **Main Interface Components:**
+1. **🎭 Animated AI Face** - Visual feedback with speaking animation
+2. **🖥️ Console Output** - Real-time colored logs of all activities
+3. **🧠 Memory Bank** - Display of all stored memories with timestamps
+4. **📋 Task Manager** - Interactive task list with timers
+5. **🎛️ Control Panel** - Voice control buttons and status
 
-### Web Browsing
-- **"RJ YouTube kholo"** - Open YouTube
-- **"RJ search for machine learning"** - Google search
-- **"RJ website kholo github.com"** - Open websites
+### **GUI Controls:**
+- **🎤 Start/Stop Listening** - Control voice recognition
+- **🧠 Clear Memory** - Reset all stored memories
+- **📋 Export Logs** - Save console output to file
+- **✅ Complete Task** - Mark selected task as done
+- **🗑️ Remove Task** - Delete selected task
 
-### File Operations
-- **"RJ note likh important meeting tomorrow"** - Take voice notes
-- **"RJ create file report.txt"** - Create files
-- **"RJ rename file old.txt to new.txt"** - Rename files
-
-## 📁 Project Structure
+## 📁 **Project Structure**
 
 ```
-├── rj_assistant.py          # Main RJ Assistant (Hindi-English)
-├── jarvis.py               # Basic JARVIS assistant
-├── enhanced_jarvis.py      # Enhanced JARVIS with advanced features
-├── text_editor.py          # Built-in text editor
-├── requirements.txt        # Python dependencies
-├── .env                   # API configuration
-├── setup.sh              # Setup script
-└── README.md             # This file
+├── advanced_rj.py          # 🎙️ Advanced RJ with all features
+├── rj_gui.py              # 🖥️ JARVIS-style GUI interface  
+├── rj_assistant.py        # 📱 Basic RJ assistant
+├── text_editor.py         # 📝 Built-in text editor
+├── run_rj.py             # 🚀 Easy launcher script
+├── requirements.txt       # 📦 Dependencies
+├── setup.sh              # ⚙️ Setup script
+├── .env                  # 🔐 API configuration
+├── rj_memory.json        # 🧠 Memory storage (auto-created)
+├── demo_memory.json      # 📋 Demo memory structure
+└── README.md            # 📖 This file
 ```
 
-## 🔧 Technical Details
+## 💾 **Memory JSON Structure**
 
-### Dependencies
-- **Speech Recognition**: Google Speech Recognition
-- **Text-to-Speech**: pyttsx3 with voice customization
-- **AI Integration**: DeepSeek API via OpenAI client
-- **Wikipedia**: Wikipedia Python library
-- **System Control**: subprocess, psutil
+```json
+{
+  "memories": [
+    {
+      "id": 1,
+      "content": "Meeting tomorrow 3 PM",
+      "type": "user_note",
+      "timestamp": "2024-01-15 14:30:00",
+      "created_at": "2024-01-15T14:30:00"
+    }
+  ],
+  "tasks": [
+    {
+      "id": 1,
+      "description": "Complete project",
+      "completed": false,
+      "timer_minutes": 30,
+      "timer_end": 1705323000
+    }
+  ],
+  "settings": {
+    "preferred_language": "hinglish",
+    "voice_model": 2
+  }
+}
+```
 
-### Voice Models
-RJ Assistant automatically selects the best available voice on your system:
-- Prioritizes female voices for better user experience
-- Falls back to voice index [2] as requested
-- Supports both Hindi and English pronunciation
+## 🎯 **Advanced Usage Examples**
 
-### Language Support
-- **Speech Recognition**: Hindi (hi-IN) and English (en-US)
-- **Wikipedia**: Hindi and English content
-- **AI Responses**: Natural Hinglish conversation
+### **Memory Management**
+```
+"RJ yaad rakh WiFi password MyHome123"     → Stores in memory
+"RJ yaad hai WiFi"                         → Recalls: "WiFi password MyHome123"
+"RJ bhool ja WiFi"                         → Removes WiFi-related memories
+```
 
-## 🛠️ Troubleshooting
+### **Task Management with Timers**
+```
+"RJ task add kar exercise 45 minutes"      → Creates task with 45-min timer
+"RJ new task buy groceries"                → Simple task without timer
+"RJ timer laga 20 minutes study"           → 20-minute study timer
+```
 
-### Audio Issues
+### **Intelligent Information Retrieval**
+```
+"RJ batao Taj Mahal ke bare mein"         → Wikipedia search + memory storage
+"RJ kya hai machine learning"              → AI explanation + memory storage
+"RJ yaad hai machine learning"             → Recalls from memory
+```
+
+### **GUI Interaction**
+- Click **🎤 Start Listening** to activate voice recognition
+- View real-time logs in the **Console Output**
+- Monitor stored memories in the **Memory Bank**
+- Track active tasks and timers in **Task Manager**
+- Control everything with the **Control Panel**
+
+## 🔧 **Technical Features**
+
+### **🗣️ Voice Recognition**
+- **Dual language** support (Hindi + English)
+- **Voice model [2]** as requested
+- **Noise cancellation** and audio calibration
+- **Continuous listening** mode with GUI
+
+### **🧠 AI Integration**
+- **DeepSeek API** with your key
+- **Context-aware** responses using memory
+- **Conversation history** tracking
+- **Hinglish personality** with natural responses
+
+### **💾 Data Persistence**
+- **JSON-based storage** for all data
+- **Automatic backups** with timestamps
+- **Import/Export** capabilities
+- **Cross-session continuity**
+
+### **⏰ Timer System**
+- **Background monitoring** of all active timers
+- **Multi-timer support** with individual notifications
+- **Visual countdown** in GUI
+- **Audio alerts** when complete
+
+## 🛠️ **Installation & Setup**
+
+### **Dependencies**
 ```bash
-# Install additional audio packages
-sudo apt-get install pulseaudio alsa-utils
+pip install openai speechrecognition pyttsx3 pyaudio psutil requests python-dotenv wikipedia matplotlib numpy pillow
+```
 
+### **Audio Setup (Linux)**
+```bash
+sudo apt-get install portaudio19-dev python3-pyaudio espeak espeak-data libespeak1 libespeak-dev
+```
+
+### **Quick Setup**
+```bash
+chmod +x setup.sh
+./setup.sh
+python3 run_rj.py
+```
+
+## 🎮 **GUI Controls**
+
+| Button | Function |
+|--------|----------|
+| 🎤 Start Listening | Activate voice recognition |
+| 🔇 Stop Listening | Deactivate voice recognition |
+| 🧠 Clear Memory | Remove all stored memories |
+| 📋 Export Logs | Save console output to file |
+| ✅ Complete Task | Mark selected task as done |
+| 🗑️ Remove Task | Delete selected task |
+
+## 🔒 **Security & Privacy**
+
+- **Local storage** - All data stays on your machine
+- **API key security** - Stored in environment file
+- **Memory encryption** - Optional JSON encryption
+- **Safe commands** - Confirmation for system operations
+
+## 🎨 **Customization**
+
+### **Voice Settings**
+- Voice model selection (uses [2] as requested)
+- Speech rate and volume control
+- Language preference (Hindi/English/Hinglish)
+
+### **GUI Themes**
+- Dark JARVIS theme (default)
+- Customizable colors and animations
+- Resizable interface components
+
+### **Memory Categories**
+- user_note, wikipedia, voice_note, task
+- Custom categories can be added
+- Searchable and filterable
+
+## 📱 **Available Assistants**
+
+1. **🎙️ Advanced RJ** (advanced_rj.py) - Full featured with GUI
+2. **📱 Basic RJ** (rj_assistant.py) - Simple voice assistant  
+3. **🖥️ Console Mode** - Advanced features without GUI
+
+## ❓ **Troubleshooting**
+
+### **Voice Recognition Issues**
+```bash
 # Test microphone
 arecord -l
-```
 
-### Permission Issues
-```bash
-# Add user to audio group
+# Check audio permissions
 sudo usermod -a -G audio $USER
 
-# Restart audio service
-sudo systemctl restart pulseaudio
+# Install additional codecs
+sudo apt-get install ubuntu-restricted-extras
 ```
 
-### Voice Recognition Problems
-- Ensure microphone is working
-- Speak clearly and close to microphone
-- Check internet connection for Google Speech Recognition
+### **GUI Issues**
+```bash
+# Install tkinter if missing
+sudo apt-get install python3-tk
 
-## 🎯 Usage Examples
-
-### Basic Commands
-```
-"RJ volume badhao"           → Increases volume
-"RJ calculator kholo"        → Opens calculator
-"RJ computer lock kar"       → Locks screen
+# For display issues
+export DISPLAY=:0
 ```
 
-### Information Queries
-```
-"RJ batao Taj Mahal ke bare mein"     → Wikipedia about Taj Mahal
-"RJ kya hai machine learning"         → Explains ML
-"RJ kaun hai Narendra Modi"          → Information about person
-```
-
-### Advanced Features
-```
-"RJ note likh meeting at 3 PM"       → Saves voice note
-"RJ Google par search kar best restaurants" → Google search
-"RJ YouTube par Bollywood songs"     → YouTube search
-```
-
-## 🔒 Security Features
-
-- Safe system commands with confirmation
-- File operation confirmations
-- API key security with environment variables
-- Error handling and recovery
-
-## 🤝 Contributing
-
-Feel free to enhance RJ Assistant:
-1. Add new voice commands
-2. Improve speech recognition
-3. Add new features
-4. Optimize performance
-
-## 📄 License
-
-This project is for personal use. DeepSeek API usage subject to their terms.
+### **Memory File Issues**
+- File created automatically on first run
+- Located at `./rj_memory.json`
+- Backup created on each update
 
 ---
 
-**Made with ❤️ for voice-controlled computing**
+## 🏃 **Quick Start Commands**
 
-🎙️ **"RJ ready hai! Boliye kya kaam hai?"**
+```bash
+# Setup everything
+./setup.sh
+
+# Start with launcher (easiest)
+python3 run_rj.py
+
+# Direct start with GUI
+python3 advanced_rj.py
+
+# Console mode only
+python3 advanced_rj.py --no-gui
+```
+
+**🎙️ "RJ ready hai! GUI mein sabkuch dikh raha hai. Boliye kya kaam hai?"**
+
+---
+
+**Made with ❤️ for advanced voice-controlled computing**
+
+**Features:** JARVIS GUI • JSON Memory • Task Timers • Hinglish Voice • Wikipedia • AI Chat
