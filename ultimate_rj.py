@@ -60,6 +60,30 @@ class UltimateRJ:
         self.retry_mode = False
         self.retry_suggestions = []
         
+        # Respectful acknowledgment responses
+        self.acknowledgment_responses = [
+            "Ok Sir",
+            "Yes Sir", 
+            "Thik hai Sir",
+            "Bass 2 minute Sir",
+            "Jarur Sir",
+            "Bilkul Sir",
+            "Abhi karta hun Sir",
+            "Right away Sir",
+            "Samjh gaya Sir",
+            "Ho gaya Sir",
+            "Done Sir",
+            "As you wish Sir",
+            "Certainly Sir",
+            "Of course Sir",
+            "Aapka kaam Sir",
+            "Immediately Sir",
+            "Zaroor Sir",
+            "Main kar deta hun Sir",
+            "Task samjh gaya Sir",
+            "Perfect Sir"
+        ]
+        
         self.setup_command_patterns()
         self.setup_memory_system()
         self.setup_gui()
@@ -533,6 +557,9 @@ class UltimateRJ:
         """Process any command intelligently without asking questions"""
         if not command:
             return
+        
+        # First give respectful acknowledgment
+        self.give_acknowledgment()
         
         # Check for retry commands
         if self.is_retry_command(command):
@@ -1627,50 +1654,70 @@ document.addEventListener('DOMContentLoaded', function() {
         web_keywords = ['youtube', 'google', 'search', 'website', 'browser']
         return any(keyword in command.lower() for keyword in web_keywords)
 
-    def auto_handle_web(self, command: str):
+    def auto_handle_web(self, command: str) -> bool:
         """Automatically handle web commands"""
         command = command.lower()
         
-        if 'youtube' in command:
-            search_query = self.extract_search_query(command)
-            if search_query:
-                url = f"https://www.youtube.com/results?search_query={search_query.replace(' ', '+')}"
-                webbrowser.open(url)
-                self.speak(f"Sir, YouTube mein '{search_query}' search kar diya!")
-            else:
-                webbrowser.open("https://www.youtube.com")
-                self.speak("Sir, YouTube open kar diya!")
+        try:
+            if 'youtube' in command:
+                search_query = self.extract_search_query(command)
+                if search_query:
+                    url = f"https://www.youtube.com/results?search_query={search_query.replace(' ', '+')}"
+                    webbrowser.open(url)
+                    self.speak(f"Sir, YouTube mein '{search_query}' search kar diya!")
+                else:
+                    webbrowser.open("https://www.youtube.com")
+                    self.speak("Sir, YouTube open kar diya!")
+                return True
+            
+            elif 'google' in command:
+                search_query = self.extract_search_query(command)
+                if search_query:
+                    url = f"https://www.google.com/search?q={search_query.replace(' ', '+')}"
+                    webbrowser.open(url)
+                    self.speak(f"Sir, Google mein '{search_query}' search kar diya!")
+                else:
+                    webbrowser.open("https://www.google.com")
+                    self.speak("Sir, Google open kar diya!")
+                return True
+                
+        except Exception as e:
+            self.speak("Sir, website open karne mein problem aaya. Alternative browser try karne ko kahiye.")
+            self.suggest_alternatives("youtube" if "youtube" in command else "web", command)
+            return False
         
-        elif 'google' in command:
-            search_query = self.extract_search_query(command)
-            if search_query:
-                url = f"https://www.google.com/search?q={search_query.replace(' ', '+')}"
-                webbrowser.open(url)
-                self.speak(f"Sir, Google mein '{search_query}' search kar diya!")
-            else:
-                webbrowser.open("https://www.google.com")
-                self.speak("Sir, Google open kar diya!")
+        return True
 
     def is_file_command(self, command: str) -> bool:
         """Check if command is file related"""
         file_keywords = ['file', 'folder', 'delete', 'create', 'open', 'rename']
         return any(keyword in command.lower() for keyword in file_keywords)
 
-    def auto_handle_files(self, command: str):
+    def auto_handle_files(self, command: str) -> bool:
         """Automatically handle file commands"""
-        # Basic file operations - can be extended
-        self.speak("Sir, file operations implement kar raha hun!")
+        try:
+            # Basic file operations - can be extended
+            self.speak("Sir, file operations implement kar raha hun!")
+            return True
+        except Exception as e:
+            self.speak("Sir, file operation mein problem aaya.")
+            return False
 
     def is_productivity_command(self, command: str) -> bool:
         """Check if command is productivity related"""
         productivity_keywords = ['routine', 'reminder', 'note', 'schedule', 'plan']
         return any(keyword in command.lower() for keyword in productivity_keywords)
 
-    def auto_handle_productivity(self, command: str):
+    def auto_handle_productivity(self, command: str) -> bool:
         """Automatically handle productivity commands"""
-        self.speak("Sir, productivity features implement kar raha hun!")
+        try:
+            self.speak("Sir, productivity features implement kar raha hun!")
+            return True
+        except Exception as e:
+            self.speak("Sir, productivity task mein problem aaya.")
+            return False
 
-    def generate_smart_code(self, command: str):
+    def generate_smart_code(self, command: str) -> bool:
         """Generate smart code using AI"""
         try:
             system_content = """You are an expert programmer. Generate clean, complete code based on user requirements.
@@ -1702,9 +1749,11 @@ document.addEventListener('DOMContentLoaded', function() {
             
             self.speak(f"Sir, code generate kar diya! Desktop pe {code_filename} file mein save hai.")
             self.log_to_console(f"Code generated: {code_path}", 'success')
+            return True
             
         except Exception as e:
             self.speak(f"Sir, code generation mein error: {str(e)}")
+            return False
 
     def handle_ai_query(self, query: str) -> bool:
         """Handle general AI queries with Sir addressing"""
@@ -1935,6 +1984,12 @@ document.addEventListener('DOMContentLoaded', function() {
             return result.returncode == 0
         except:
             return False
+
+    def give_acknowledgment(self):
+        """Give respectful acknowledgment before processing command"""
+        acknowledgment = random.choice(self.acknowledgment_responses)
+        self.speak(acknowledgment)
+        self.log_to_console(f"🫡 {acknowledgment}", 'rj')
 
     def run_gui(self):
         """Run the GUI version"""
