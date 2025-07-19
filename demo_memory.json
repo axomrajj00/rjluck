@@ -1,0 +1,59 @@
+{
+  "memories": [
+    {
+      "id": 1,
+      "content": "Aaj meeting hai 3 PM me with team",
+      "type": "user_note",
+      "timestamp": "2024-01-15 14:30:00",
+      "created_at": "2024-01-15T14:30:00"
+    },
+    {
+      "id": 2,
+      "content": "Password for WiFi is: MyHome@123",
+      "type": "user_note",
+      "timestamp": "2024-01-15 15:00:00",
+      "created_at": "2024-01-15T15:00:00"
+    },
+    {
+      "id": 3,
+      "content": "Wikipedia search: Mahatma Gandhi - According to Wikipedia: Mohandas Karamchand Gandhi was an Indian lawyer...",
+      "type": "wikipedia",
+      "timestamp": "2024-01-15 15:15:00",
+      "created_at": "2024-01-15T15:15:00"
+    }
+  ],
+  "tasks": [
+    {
+      "id": 1,
+      "description": "Complete project documentation",
+      "completed": false,
+      "created_at": "2024-01-15T14:00:00",
+      "timer_minutes": 30,
+      "timer_end": 1705323000
+    },
+    {
+      "id": 2,
+      "description": "Call client about meeting",
+      "completed": true,
+      "created_at": "2024-01-15T13:00:00",
+      "completed_at": "2024-01-15T13:30:00",
+      "timer_minutes": 0,
+      "timer_end": null
+    },
+    {
+      "id": 3,
+      "description": "Review code changes",
+      "completed": false,
+      "created_at": "2024-01-15T15:30:00",
+      "timer_minutes": 45,
+      "timer_end": 1705325700
+    }
+  ],
+  "settings": {
+    "preferred_language": "hinglish",
+    "voice_model": 2,
+    "auto_save": true
+  },
+  "created": "2024-01-15T12:00:00",
+  "last_updated": "2024-01-15T15:30:00"
+}
